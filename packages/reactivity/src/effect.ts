@@ -7,18 +7,21 @@ export let activeEffect: ReactiveEffect | undefined;
 
 export class ReactiveEffect<T = any> {
 	public active = true;
+	private parentEffect: undefined | ReactiveEffect;
 
 	constructor(public fn: () => T) {}
 
 	run() {
+		if (this === activeEffect) return;
 		if (!this.active) return this.fn();
+		this.parentEffect = activeEffect;
 		activeEffect = this;
 		try {
 			return this.fn();
 		} catch (error) {
 			console.error(error);
 		} finally {
-			activeEffect = undefined;
+			activeEffect = this.parentEffect;
 		}
 	}
 
