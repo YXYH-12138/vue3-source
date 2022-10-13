@@ -16,6 +16,7 @@ module.exports = {
 	rules: {
 		indent: ["error", "tab"],
 		"linebreak-style": ["error", "windows"],
-		semi: ["error", "always"]
+		semi: ["error", "always"],
+		"no-unused-vars": "warn"
 	}
 };
