@@ -7,6 +7,7 @@ export let activeEffect: ReactiveEffect | undefined;
 
 export class ReactiveEffect<T = any> {
 	public active = true;
+	public deps: Set<ReactiveEffect>[] = [];
 	private parentEffect: undefined | ReactiveEffect;
 
 	constructor(public fn: () => T) {}
@@ -16,6 +17,7 @@ export class ReactiveEffect<T = any> {
 		if (!this.active) return this.fn();
 		this.parentEffect = activeEffect;
 		activeEffect = this;
+		cleanupEffect(this);
 		try {
 			return this.fn();
 		} catch (error) {
@@ -42,6 +44,18 @@ export function track<T extends object>(target: T, key: any) {
 	}
 	if (!deps.has(activeEffect)) {
 		deps.add(activeEffect);
+		activeEffect.deps.push(deps);
+	}
+}
+
+export function cleanupEffect(effect: ReactiveEffect) {
+	const { deps } = effect;
+	const len = deps.length;
+	if (len) {
+		for (let i = 0; i < len; i++) {
+			deps[i].delete(effect);
+		}
+		deps.length = 0;
 	}
 }
 
@@ -50,12 +64,13 @@ export function trigger<T extends object>(target: T, key: any) {
 	if (!depMap) return;
 	const deps = depMap.get(key);
 	if (!deps) return;
-	deps.forEach((dep) => {
+	[...deps].forEach((dep) => {
 		dep.run();
 	});
 }
 
 export function effect<T = any>(fn: () => T) {
 	const _effect = new ReactiveEffect<T>(fn);
+	console.log(_effect);
 	return _effect.run();
 }

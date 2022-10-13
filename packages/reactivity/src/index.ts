@@ -1,15 +1,25 @@
 import { effect } from "./effect";
 import { reactive } from "./reactive";
 
-const obj = reactive({ a: 1 });
+const data1 = reactive({ a: "1", b: "2", show: true });
+const data2 = reactive({ a: 1 });
 
-const data1 = reactive(obj);
-const data2 = reactive(obj);
+// effect(() => {
+// 	effect(() => {
+// 		console.log(data1.b);
+// 	});
+// 	console.log(data1.a);
+// });
 
 effect(() => {
-	document.body.innerHTML = data1.a + "";
+	console.log("我执行了");
+	document.body.innerHTML = data1.show ? data1.a : data1.b;
 });
 
 setTimeout(() => {
-	data2.a = 333;
-}, 1000);
+	data1.show = false;
+}, 100);
+
+setTimeout(() => {
+	data1.a = "22";
+}, 500);
