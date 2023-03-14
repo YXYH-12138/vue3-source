@@ -1,6 +1,8 @@
-const { resolve } = require("path");
-const { build } = require("esbuild");
-const args = require("minimist")(process.argv.slice(2));
+import { resolve } from "path";
+import { build } from "esbuild";
+import minimist from "minimist";
+
+const args = minimist(process.argv.slice(2));
 
 const target = args._[0];
 const format = args.f;
@@ -9,9 +11,15 @@ const baseName = resolve(__dirname, "../packages", target);
 
 const pkg = require(resolve(baseName, "package.json"));
 
-const outputFormat = format.startsWith("global") ? "iife" : format === "cjs" ? "cjs" : "esm";
+const outputFormat = format === "global" ? "iife" : format === "cjs" ? "cjs" : "esm";
 
 const outfile = resolve(baseName, `dist/${target}.${format}.js`);
+
+let externals: string[] = [];
+// global是不需要做排除的
+if (format === "cjs" || format === "esm-bundler") {
+	externals = [...externals, ...Object.keys(pkg.dependencies || {})];
+}
 
 build({
 	// 入口
@@ -20,6 +28,7 @@ build({
 	bundle: true,
 	// 输出文件
 	outfile,
+	external: externals,
 	format: outputFormat,
 	sourcemap: true,
 	globalName: pkg.buildOptions?.name,

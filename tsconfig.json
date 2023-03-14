@@ -3,13 +3,14 @@
 		"baseUrl": ".",
 		"outDir": "dist",
 		"sourceMap": false,
-		"target": "es2016",
+		"target": "ESNext",
 		"useDefineForClassFields": false,
-		"module": "esnext",
 		"moduleResolution": "node",
+		"module": "ESNext",
 		"allowJs": false,
 		"strict": true,
 		"noUnusedLocals": true,
+		"skipLibCheck": true,
 		"experimentalDecorators": true,
 		"resolveJsonModule": true,
 		"esModuleInterop": true,
@@ -19,9 +20,9 @@
 		"types": ["node"],
 		"rootDir": ".",
 		"paths": {
-			"@vue/*": ["packages/*/src"],
-			"vue": ["packages/vue/src"]
+			"@vue/*": ["packages/*/src"]
 		}
 	},
-	"include": ["packages/*/src"]
+	"include": ["packages/**/*.ts", "scripts/*.ts", "scripts/build.js"]
+	// "references": [{ "path": "./tsconfig.node.json" }]
 }

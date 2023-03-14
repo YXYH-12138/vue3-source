@@ -1,18 +1,17 @@
 {
-  "name": "@vue/shared",
-  "version": "1.0.0",
-  "description": "@vue/shared",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "coderred",
-  "license": "ISC",
-  "buildOptions": {
-    "formats": [
-      "cjs",
-      "esm-bundler"
-    ]
-  }
+	"name": "@vue/shared",
+	"version": "1.0.0",
+	"description": "@vue/shared",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"keywords": [],
+	"author": "coderred",
+	"license": "ISC",
+	"buildOptions": {
+		"formats": [
+			"cjs",
+			"esm-bundler"
+		]
+	}
 }
