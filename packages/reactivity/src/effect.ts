@@ -20,10 +20,9 @@ export class ReactiveEffect<T = any> {
 		cleanupEffect(this);
 		try {
 			return this.fn();
-		} catch (error) {
-			console.error(error);
 		} finally {
 			activeEffect = this.parentEffect;
+			this.parentEffect = undefined;
 		}
 	}
 
@@ -64,13 +63,12 @@ export function trigger<T extends object>(target: T, key: any) {
 	if (!depMap) return;
 	const deps = depMap.get(key);
 	if (!deps) return;
-	[...deps].forEach((dep) => {
+	Array.from(deps).forEach((dep) => {
 		dep.run();
 	});
 }
 
 export function effect<T = any>(fn: () => T) {
 	const _effect = new ReactiveEffect<T>(fn);
-	console.log(_effect);
 	return _effect.run();
 }
