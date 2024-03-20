@@ -43,8 +43,6 @@ function createConfig(format, output) {
 	output.sourcemap = !!process.env.SOURCE_MAP;
 	output.name = packageOptions.name;
 
-	console.log(output, format);
-
 	let external = [];
 	// global是不需要做排除的
 	if (format === "cjs" || format === "esm-bundler") {
