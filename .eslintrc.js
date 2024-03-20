@@ -17,11 +17,12 @@ module.exports = {
 	},
 	plugins: ["@typescript-eslint"],
 	rules: {
-		indent: ["error", "tab"],
+		indent: ["off", "tab"],
 		"@typescript-eslint/no-non-null-assertion": "off",
 		"@typescript-eslint/no-var-requires": "off",
 		"@typescript-eslint/no-explicit-any": "off",
 		"linebreak-style": ["error", "windows"],
+		"@typescript-eslint/ban-types": "off",
 		quotes: ["error", "double"],
 		semi: ["error", "always"],
 		"no-empty-function": "off",

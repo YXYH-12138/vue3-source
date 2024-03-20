@@ -23,17 +23,18 @@ const allTarget = fs.readdirSync("packages").filter((f) => {
 	return true;
 });
 
-run();
-
-function run() {
-	// TODO:省略其他处理
-	buildAll(allTarget);
-}
+buildAll(allTarget);
 
 function buildAll(targets) {
 	runParallel(cpus.length, targets, build);
 }
 
+/**
+ * 并行打包
+ * @param {*} maxConcurrency 最大打包个数
+ * @param {*} targets 需要打包的路径数组
+ * @param {*} iteratorFn 回调
+ */
 async function runParallel(maxConcurrency, targets, iteratorFn) {
 	const excuteing = [];
 	const ret = [];

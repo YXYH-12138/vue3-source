@@ -14,6 +14,8 @@ const packageDir = path.resolve(packagesDir, process.env.TARGET);
 const resolve = (p) => path.resolve(packageDir, p);
 const pkg = require(resolve("package.json"));
 const packageOptions = pkg.buildOptions || {};
+
+// 打包后的文件名称
 const name = packageOptions.filename || path.basename(packageDir);
 
 const defaultFormats = ["esm-bundler", "cjs"];
@@ -40,6 +42,8 @@ const packageConfigs = packageFormats.map((format) => createConfig(format, outpu
 function createConfig(format, output) {
 	output.sourcemap = !!process.env.SOURCE_MAP;
 	output.name = packageOptions.name;
+
+	console.log(output, format);
 
 	let external = [];
 	// global是不需要做排除的

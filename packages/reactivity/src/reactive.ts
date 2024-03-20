@@ -1,18 +1,85 @@
-import { isObject } from "@vue/shared";
-import { mutableHandlers } from "./baseHandlers";
+import {
+	nomoralHandlers,
+	readonlyHandlers,
+	shallowHandlers,
+	shallowReadonlyHandlers
+} from "./baseHandlers";
+import type { Ref } from "./ref";
+
+export const enum ReactiveFlags {
+	SKIP = "__v_skip",
+	IS_REACTIVE = "__v_isReactive",
+	IS_READONLY = "__v_isReadonly",
+	IS_SHALLOW = "__v_isShallow",
+	RAW = "__v_raw"
+}
+
+type BaseTypes = string | number | boolean;
+
+type DeepReadonly<T> = {
+	readonly [P in keyof T]: T[P] extends object ? DeepReadonly<T[P]> : T[P];
+};
+
+export type Reactive<T extends object> = T;
+
+export type UnwrapRefSimple<T> = T extends BaseTypes | Function
+	? T
+	: {
+			[P in keyof T]: T[P] extends Ref<infer V> ? UnwrapRef<V> : T[P];
+	  };
+
+export type UnwrapRef<T> = T extends Ref<infer V> ? UnwrapRefSimple<V> : UnwrapRefSimple<T>;
+
+export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>;
+
+export function reactive<T extends object>(target: T): UnwrapNestedRefs<T> {
+	return createReactive<T>(target, false, false) as UnwrapNestedRefs<T>;
+}
+
+export function shallowReactive<T extends object>(target: T) {
+	return createReactive<T>(target, true, false);
+}
+
+export function readonly<T extends object>(target: T) {
+	return createReactive<T>(target, false, true) as DeepReadonly<T>;
+}
+
+export function shallowReadonly<T extends object>(target: T) {
+	return createReactive<T>(target, true, true) as Readonly<T>;
+}
+
+export function toRaw(value: any) {
+	// 如果 value 是 proxy 的话 ,那么直接返回就可以了
+	// 因为会触发 createGetter 内的逻辑
+	// 如果 value 是普通对象的话，
+	// 我们就应该返回普通对象
+	// 只要不是 proxy ，只要是得到了 undefined 的话，那么就一定是普通对象
+	// TODO 这里和源码里面实现的不一样，不确定后面会不会有问题
+	if (!value[ReactiveFlags.RAW]) {
+		return value;
+	}
+
+	return value[ReactiveFlags.RAW];
+}
 
 const reactiveMap = new WeakMap();
 
-export function reactive<T extends object>(target: T) {
-	return createReactiveObject(target, mutableHandlers);
-}
+function createReactive<T extends object>(target: T, isShallow: boolean, isReadonly: boolean): T {
+	const handlers = isShallow
+		? isReadonly
+			? shallowReadonlyHandlers
+			: shallowHandlers
+		: isReadonly
+		? readonlyHandlers
+		: nomoralHandlers;
 
-function createReactiveObject<T extends object>(target: T, baseHandlers: ProxyHandler<any>): T {
-	if (!isObject(target)) return target;
-	// 检查对象是否代理过，如果已经代理过，则从缓存中返回
-	let existingProxy = reactiveMap.get(target);
-	if (!existingProxy) {
-		reactiveMap.set(target, (existingProxy = new Proxy<T>(target, baseHandlers)));
-	}
-	return existingProxy;
+	// 已经代理过的对象不需要代理
+	const existionProxy = reactiveMap.get(target);
+	if (existionProxy) return existionProxy;
+
+	const proxy = new Proxy<T>(target, handlers);
+	// 缓存代理过的对象
+	reactiveMap.set(target, proxy);
+
+	return proxy;
 }

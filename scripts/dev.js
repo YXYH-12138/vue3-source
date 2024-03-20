@@ -1,4 +1,8 @@
-import { resolve } from "path";
+// @ts-check
+
+import { resolve } from "node:path";
+import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import minimist from "minimist";
 
@@ -6,6 +10,10 @@ const args = minimist(process.argv.slice(2));
 
 const target = args._[0];
 const format = args.f;
+
+const require = createRequire(import.meta.url);
+
+const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
 const baseName = resolve(__dirname, "../packages", target);
 
@@ -15,7 +23,7 @@ const outputFormat = format === "global" ? "iife" : format === "cjs" ? "cjs" : "
 
 const outfile = resolve(baseName, `dist/${target}.${format}.js`);
 
-let externals: string[] = [];
+let externals = [];
 // global是不需要做排除的
 if (format === "cjs" || format === "esm-bundler") {
 	externals = [...externals, ...Object.keys(pkg.dependencies || {})];

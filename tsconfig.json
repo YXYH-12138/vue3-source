@@ -17,12 +17,12 @@
 		"removeComments": false,
 		"jsx": "preserve",
 		"lib": ["esnext", "dom"],
-		"types": ["node"],
+		"types": ["node", "vitest/globals"],
 		"rootDir": ".",
 		"paths": {
 			"@vue/*": ["packages/*/src"]
 		}
 	},
-	"include": ["packages/**/*.ts", "scripts/*.ts", "scripts/build.js"]
+	"include": ["packages/**/*.ts", "scripts/*.ts", "scripts/build.js", "scripts/dev.js"]
 	// "references": [{ "path": "./tsconfig.node.json" }]
 }
