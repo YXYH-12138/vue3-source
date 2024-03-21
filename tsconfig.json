@@ -23,6 +23,7 @@
 			"@vue/*": ["packages/*/src"]
 		}
 	},
+	"exclude": ["packages/*/__tests__"],
 	"include": ["packages/**/*.ts", "scripts/*.ts", "scripts/build.js", "scripts/dev.js"]
 	// "references": [{ "path": "./tsconfig.node.json" }]
 }

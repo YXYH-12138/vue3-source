@@ -2,9 +2,9 @@
 	"name": "@vue/runtime-core",
 	"version": "1.0.0",
 	"description": "@vue/runtime-core",
-	"main": "dist/runtime-core.d.cjs.js",
-	"module": "dist/runtime-core.d.esm-bundler.js",
-	"types": "dist/runtime-core.d.d.ts",
+	"main": "dist/runtime-core.cjs.js",
+	"module": "dist/runtime-core.esm-bundler.js",
+	"types": "dist/runtime-core.d.ts",
 	"scripts": {
 		"test": "vitest"
 	},
