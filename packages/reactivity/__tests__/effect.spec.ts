@@ -9,6 +9,16 @@ describe("effect", () => {
 		expect(fnSpy).toHaveBeenCalledTimes(1);
 	});
 
+	it("should observe list", () => {
+		const list = reactive([1]);
+		const fnSpy = vi.fn(() => {
+			list.join(",");
+		});
+		effect(fnSpy);
+		list[2] = 20;
+		expect(fnSpy).toHaveBeenCalledTimes(2);
+	});
+
 	it("should observe basic properties", () => {
 		let dummy;
 		const counter = reactive({ num: 0 });
