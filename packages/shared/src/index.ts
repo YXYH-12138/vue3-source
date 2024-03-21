@@ -23,3 +23,16 @@ export const toTypeString = (value: unknown): string => objectToString.call(valu
 
 // 比较值是否已更改，并考虑NaN。
 export const hasChanged = (value: any, oldValue: any): boolean => !Object.is(value, oldValue);
+
+export const def = (obj: object, key: string | symbol, value: any) => {
+	Object.defineProperty(obj, key, {
+		configurable: true,
+		enumerable: false,
+		value
+	});
+};
+
+export const toRawType = (value: unknown): string => {
+	// extract "RawType" from strings like "[object RawType]"
+	return toTypeString(value).slice(8, -1);
+};

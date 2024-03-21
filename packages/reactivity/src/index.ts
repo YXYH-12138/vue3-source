@@ -1,4 +1,4 @@
-export { reactive, shallowReactive, readonly, shallowReadonly, toRaw } from "./reactive";
+export { reactive, shallowReactive, readonly, shallowReadonly, toRaw, markRaw } from "./reactive";
 export { effect } from "./effect";
 export { default as schedule } from "./schedule";
 export { computed } from "./computed";
