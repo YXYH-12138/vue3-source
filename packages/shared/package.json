@@ -2,6 +2,9 @@
 	"name": "@vue/shared",
 	"version": "1.0.0",
 	"description": "@vue/shared",
+	"main": "dist/shared.cjs.js",
+	"module": "dist/shared.esm-bundler.js",
+	"types": "dist/shared.d.ts",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1"
 	},

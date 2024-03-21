@@ -14,7 +14,7 @@ const args = minimist(process.argv.slice(2));
 
 const formats = args.formats || args.f;
 const devOnly = args.devOnly || args.d;
-const sourceMap = args.sourcemap || args.s;
+const sourceMap = (args.sourcemap || args.s) ?? true;
 
 const allTarget = fs.readdirSync("packages").filter((f) => {
 	if (!fs.statSync(`packages/${f}`).isDirectory()) return false;

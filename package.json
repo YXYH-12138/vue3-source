@@ -1,5 +1,4 @@
 {
-	"name": "vue3-source",
 	"version": "1.0.0",
 	"description": "",
 	"main": "index.js",
@@ -7,6 +6,7 @@
 	"scripts": {
 		"dev": "node scripts/dev.js reactivity -f global",
 		"build": "node scripts/build.js",
+		"build-dts": "tsc -p tsconfig.build.json",
 		"test": "vitest"
 	},
 	"keywords": [],
@@ -28,9 +28,11 @@
 		"minimist": "^1.2.7",
 		"prettier": "^2.7.1",
 		"rollup": "^3.19.1",
+		"rollup-plugin-dts": "^6.1.0",
 		"rollup-plugin-typescript2": "^0.34.1",
 		"sucrase": "^3.29.0",
 		"typescript": "^4.8.4",
+		"vite": "^5.2.2",
 		"vitest": "^1.4.0"
 	}
 }

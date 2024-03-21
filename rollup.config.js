@@ -4,6 +4,7 @@ import path from "node:path";
 import typescript from "rollup-plugin-typescript2";
 import { nodeResolve } from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
+import dts from "rollup-plugin-dts";
 
 const require = createRequire(import.meta.url);
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
@@ -48,22 +49,34 @@ function createConfig(format, output) {
 	if (format === "cjs" || format === "esm-bundler") {
 		external = [...external, ...Object.keys(pkg.dependencies || {})];
 	}
-	return {
-		input: resolve("./src/index.ts"),
-		plugins: [
-			nodeResolve(),
-			commonjs(),
-			typescript({ tsconfig: path.resolve(__dirname, "tsconfig.json") })
-		],
-		external,
-		output
-		// onwarn: (msg, warn) => {
-		// 	// 忽略 Circular 的错误
-		// 	if (!/Circular/.test(msg)) {
-		// 		warn(msg);
-		// 	}
-		// }
-	};
+	return [
+		{
+			input: resolve("./src/index.ts"),
+			plugins: [
+				nodeResolve(),
+				commonjs(),
+				typescript({
+					tsconfig: path.resolve(__dirname, "tsconfig.json")
+				})
+			],
+			external,
+			output
+			// onwarn: (msg, warn) => {
+			// 	// 忽略 Circular 的错误
+			// 	if (!/Circular/.test(msg)) {
+			// 		warn(msg);
+			// 	}
+			// }
+		},
+		{
+			input: resolve("./src/index.ts"),
+			plugins: [dts()],
+			output: {
+				format: "es",
+				file: resolve(`dist/${name}.d.ts`)
+			}
+		}
+	];
 }
 
-export default packageConfigs;
+export default packageConfigs.flat();
