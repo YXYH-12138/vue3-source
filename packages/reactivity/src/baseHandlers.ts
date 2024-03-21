@@ -1,7 +1,7 @@
 import { extend, hasChanged, hasOwn, isArray, isMap, isObject, isSet, isSymbol } from "@vue/shared";
 import { enableTracking, pauseTracking, track, trigger } from "./effect";
 import { TriggerOpTypes } from "./operations";
-import { ReactiveFlags, reactive, readonly, toReactive } from "./reactive";
+import { ReactiveFlags, reactive, readonly, toRaw, toReactive } from "./reactive";
 import { isRef } from "./ref";
 
 export const ITERATE_KEY = Symbol();
@@ -311,7 +311,7 @@ function createSetter(isReadonly: boolean) {
 		 * 才执行副作用函数
 		 * */
 		if (hasChanged(oldValue, value) && receiver[ReactiveFlags.RAW] === target) {
-			const unTarget = isRef(target) ? target[ReactiveFlags.RAW] ?? target : target;
+			const unTarget = isRef(target) ? toRaw(target) : target;
 			trigger(unTarget, key, type, value);
 		}
 		return result;

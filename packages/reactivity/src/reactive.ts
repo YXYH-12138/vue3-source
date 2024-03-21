@@ -49,20 +49,6 @@ export function shallowReadonly<T extends object>(target: T) {
 	return createReactive<T>(target, true, true) as Readonly<T>;
 }
 
-export function toRaw(value: any) {
-	// 如果 value 是 proxy 的话 ,那么直接返回就可以了
-	// 因为会触发 createGetter 内的逻辑
-	// 如果 value 是普通对象的话，
-	// 我们就应该返回普通对象
-	// 只要不是 proxy ，只要是得到了 undefined 的话，那么就一定是普通对象
-	// TODO 这里和源码里面实现的不一样，不确定后面会不会有问题
-	if (!value[ReactiveFlags.RAW]) {
-		return value;
-	}
-
-	return value[ReactiveFlags.RAW];
-}
-
 const reactiveMap = new WeakMap();
 
 function createReactive<T extends object>(target: T, isShallow: boolean, isReadonly: boolean): T {
@@ -91,3 +77,8 @@ function createReactive<T extends object>(target: T, isShallow: boolean, isReado
  */
 export const toReactive = <T extends unknown>(value: T): T =>
 	isObject(value) ? reactive(value) : value;
+
+export function toRaw<T>(observed: any): T {
+	const raw = observed && observed[ReactiveFlags.RAW];
+	return raw ? toRaw(raw) : observed;
+}
