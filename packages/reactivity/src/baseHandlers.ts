@@ -1,7 +1,7 @@
 import { extend, hasChanged, hasOwn, isArray, isMap, isObject, isSet, isSymbol } from "@vue/shared";
 import { enableTracking, pauseTracking, track, trigger } from "./effect";
 import { TriggerOpTypes } from "./operations";
-import { ReactiveFlags, reactive, readonly } from "./reactive";
+import { ReactiveFlags, reactive, readonly, toReactive } from "./reactive";
 import { isRef } from "./ref";
 
 export const ITERATE_KEY = Symbol();
@@ -102,7 +102,7 @@ const mutableInstrumentations: Record<any, Function> = {
 			track(target, key);
 		}
 		// 如果获取的是一个对象则需要进行代理
-		return isObject(result) ? reactive(result) : result;
+		return toReactive(result);
 	},
 	set(this: any, key: any, value: any) {
 		const target = this[ReactiveFlags.RAW];
@@ -139,12 +139,10 @@ const mutableInstrumentations: Record<any, Function> = {
 	forEach(this: any, callback: any, thisArg: any) {
 		const target = this[ReactiveFlags.RAW];
 
-		const wrap = (val: any) => (isObject(val) ? reactive(val) : val);
-
 		track(target, ITERATE_KEY);
 
 		target.forEach((value: any, key: any) => {
-			callback(wrap(value), wrap(key), this);
+			callback(toReactive(value), toReactive(key), this);
 		}, thisArg);
 	},
 	/**
@@ -163,14 +161,12 @@ function iterableMethod(this: any) {
 	track(target, ITERATE_KEY);
 	const itr = target[Symbol.iterator]() as IterableIterator<any>;
 
-	const wrap = (val: any) => (isObject(val) ? reactive(val) : val);
-
 	return {
 		// 迭代器协议
 		next() {
 			const { value, done } = itr.next();
 			return {
-				value: value != null ? [wrap(value[0]), wrap(value[1])] : value,
+				value: value != null ? [toReactive(value[0]), toReactive(value[1])] : value,
 				done: done
 			};
 		},
@@ -185,14 +181,12 @@ function valuesIterableMethod(this: any) {
 	track(target, ITERATE_KEY);
 	const itr = target.values() as IterableIterator<any>;
 
-	const wrap = (val: any) => (isObject(val) ? reactive(val) : val);
-
 	return {
 		// 迭代器协议
 		next() {
 			const { value, done } = itr.next();
 			return {
-				value: value != null ? wrap(value) : value,
+				value: value != null ? toReactive(value) : value,
 				done: done
 			};
 		},
@@ -207,14 +201,12 @@ function keysIterableMethod(this: any) {
 	track(target, MAP_KEYS_ITERATE_KEY);
 	const itr = target.keys() as IterableIterator<any>;
 
-	const wrap = (val: any) => (isObject(val) ? reactive(val) : val);
-
 	return {
 		// 迭代器协议
 		next() {
 			const { value, done } = itr.next();
 			return {
-				value: value != null ? wrap(value) : value,
+				value: value != null ? toReactive(value) : value,
 				done: done
 			};
 		},

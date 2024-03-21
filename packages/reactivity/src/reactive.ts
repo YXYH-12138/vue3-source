@@ -1,3 +1,4 @@
+import { isObject } from "@vue/shared";
 import {
 	nomoralHandlers,
 	readonlyHandlers,
@@ -83,3 +84,10 @@ function createReactive<T extends object>(target: T, isShallow: boolean, isReado
 
 	return proxy;
 }
+
+/**
+ * 转换为响应式对象
+ * @param value
+ */
+export const toReactive = <T extends unknown>(value: T): T =>
+	isObject(value) ? reactive(value) : value;

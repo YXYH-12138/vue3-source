@@ -15,7 +15,9 @@ export function ref<T>(target: T): Ref<T> {
 	return reactive(wrapper);
 }
 
-export const isRef = (val: any) => val && !!val.__v_isRef;
+export function isRef(r: any) {
+	return !!(r && r.__v_isRef === true);
+}
 
 export function toRef<T extends object, K extends keyof T>(target: T, key: K): Ref<T[K]> {
 	if (!isObject(target)) {
