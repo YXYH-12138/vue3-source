@@ -1,6 +1,6 @@
 import { effect } from "../src/effect";
 import { reactive } from "../src/reactive";
-import { isRef, ref, unRef } from "../src/ref";
+import { isRef, ref, shallowRef, unRef } from "../src/ref";
 describe("ref", () => {
 	it("should be reactive", () => {
 		const a = ref(1);
@@ -48,5 +48,36 @@ describe("ref", () => {
 		const a = ref(1);
 		expect(unRef(a)).toBe(1);
 		expect(unRef(1)).toBe(1);
+	});
+
+	test("shallowRef", () => {
+		const sref = shallowRef({ a: 1 });
+		// expect(isReactive(sref.value)).toBe(false);
+
+		let dummy;
+		effect(() => {
+			dummy = sref.value.a;
+		});
+		expect(dummy).toBe(1);
+
+		sref.value = { a: 2 };
+		// expect(isReactive(sref.value)).toBe(false);
+		expect(dummy).toBe(2);
+	});
+
+	test("shallowRef force trigger", () => {
+		const sref = shallowRef({ a: 1 });
+		let dummy;
+		effect(() => {
+			dummy = sref.value.a;
+		});
+		expect(dummy).toBe(1);
+
+		sref.value.a = 2;
+		expect(dummy).toBe(1); // should not trigger yet
+
+		// force trigger
+		// triggerRef(sref);
+		// expect(dummy).toBe(2);
 	});
 });
