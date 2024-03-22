@@ -56,7 +56,8 @@ function createConfig(format, output) {
 				nodeResolve(),
 				commonjs(),
 				typescript({
-					tsconfig: path.resolve(__dirname, "tsconfig.json")
+					check: false,
+					tsconfig: path.resolve(__dirname, "tsconfig.build.json")
 				})
 			],
 			external,

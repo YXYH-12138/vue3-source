@@ -8,24 +8,28 @@ import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 
-// type BuildFn = (target: string) => Promise<void>;
-
 const args = minimist(process.argv.slice(2));
+
+const targets = args._;
 
 const formats = args.formats || args.f;
 const devOnly = args.devOnly || args.d;
 const sourceMap = (args.sourcemap || args.s) ?? true;
 
-const allTarget = fs.readdirSync("packages").filter((f) => {
+/** @type {boolean | undefined} */
+const buildAllMatching = args.all || args.a;
+
+const allTargets = fs.readdirSync("packages").filter((f) => {
 	if (!fs.statSync(`packages/${f}`).isDirectory()) return false;
 	const pkg = require(`../packages/${f}/package.json`);
 	if (!pkg.buildOptions && pkg.private) return false;
 	return true;
 });
 
-buildAll(allTarget);
+buildAll(targets.length ? fuzzyMatchTarget(targets, buildAllMatching) : allTargets);
 
 function buildAll(targets) {
+	console.log(`打包目标：${targets.join(", ")}`);
 	runParallel(cpus.length, targets, build);
 }
 
@@ -50,6 +54,35 @@ async function runParallel(maxConcurrency, targets, iteratorFn) {
 		}
 	}
 	await Promise.all(ret);
+}
+
+/**
+ *
+ * @param {ReadonlyArray<string>} partialTargets
+ * @param {boolean | undefined} includeAllMatching
+ */
+export function fuzzyMatchTarget(partialTargets, includeAllMatching) {
+	/** @type {Array<string>} */
+	const matched = [];
+	partialTargets.forEach((partialTarget) => {
+		for (const target of targets) {
+			if (target.match(partialTarget)) {
+				matched.push(target);
+				if (!includeAllMatching) {
+					break;
+				}
+			}
+		}
+	});
+	if (matched.length) {
+		return matched;
+	} else {
+		console.log();
+		console.error(`Target ${partialTargets.toString()} not found!`);
+		console.log();
+
+		process.exit(1);
+	}
 }
 
 async function build(target) {
