@@ -123,7 +123,7 @@ function createReactive<T extends object>(target: T, isShallow: boolean, isReado
  * @param value
  */
 export const toReactive = <T extends unknown>(value: T): T =>
-	isObject(value) ? reactive(value) : value;
+	isObject(value) ? reactive(value as any) : value;
 
 export function toRaw<T>(observed: any): T {
 	const raw = observed && observed[ReactiveFlags.RAW];

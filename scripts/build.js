@@ -57,7 +57,7 @@ async function runParallel(maxConcurrency, targets, iteratorFn) {
 }
 
 /**
- *
+ * 对打包目标进行匹配
  * @param {ReadonlyArray<string>} partialTargets
  * @param {boolean | undefined} includeAllMatching
  */
@@ -65,7 +65,7 @@ export function fuzzyMatchTarget(partialTargets, includeAllMatching) {
 	/** @type {Array<string>} */
 	const matched = [];
 	partialTargets.forEach((partialTarget) => {
-		for (const target of targets) {
+		for (const target of allTargets) {
 			if (target.match(partialTarget)) {
 				matched.push(target);
 				if (!includeAllMatching) {

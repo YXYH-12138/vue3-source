@@ -17,5 +17,8 @@
 			"cjs",
 			"esm-bundler"
 		]
+	},
+	"dependencies": {
+		"@vue/shared": "workspace:*"
 	}
 }
