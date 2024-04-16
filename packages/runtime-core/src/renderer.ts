@@ -180,7 +180,7 @@ export function createRenderer({
 		insert(el, container, anchor);
 	}
 
-	function diff(n1: VNode[], n2: VNode[], el: RendererElement) {
+	function diff(n1: VNode[], n2: VNode[], container: RendererElement) {
 		const oldLen = n1.length;
 		const newLen = n2.length;
 
@@ -195,7 +195,7 @@ export function createRenderer({
 				const oldNode = n1[j];
 				if (oldNode.key === newNode.key) {
 					find = true;
-					patch(oldNode, newNode, el);
+					patch(oldNode, newNode, container);
 					// 如果找到的旧节点的索引小于最大的索引，则说明需要移动
 					if (j < lastIndex) {
 						// 获取新节点的上一个节点
@@ -203,7 +203,7 @@ export function createRenderer({
 						if (prevNode) {
 							// 以上一个节点的下一个兄弟节点作为锚点
 							const anchor = prevNode.el!.nextSibling as HTMLElement;
-							insert(oldNode.el!, el, anchor);
+							insert(oldNode.el!, container, anchor);
 						}
 					} else {
 						lastIndex = j;
@@ -215,18 +215,18 @@ export function createRenderer({
 			if (!find) {
 				// 获取新节点的上一个节点
 				const prevNode = n2[i - 1];
-				if (prevNode) {
-					// 以上一个节点的下一个兄弟节点作为锚点
-					const anchor = prevNode.el!.nextSibling as HTMLElement;
-					patch(null, newNode, el, anchor);
-				}
+				// 如果有prevNode以上一个节点的下一个兄弟节点作为锚点，
+				// 没有代表需要将元素插入到开始，需要使用container.firstChild作为锚点，不然会将节点插入到已有节点的后面
+				const anchor = prevNode ? prevNode.el.nextSibling : container.firstChild;
+				patch(null, newNode, container, anchor as HTMLElement);
 			}
 			// 删除旧节点
 			for (let j = 0; j < oldLen; j++) {
-				const oldNode = n1[j];
-				const vnode = n2.find((v) => v.key === oldNode.key);
-				if (!vnode) {
-					unmount(oldNode);
+				const oldVNode = n1[j];
+				const has = n2.find((v) => v.key === oldVNode.key);
+				// 如果没有则代表需要删除
+				if (!has) {
+					unmount(oldVNode);
 				}
 			}
 		}
