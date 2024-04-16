@@ -75,13 +75,13 @@ effect(() => {
 		children: [
 			{
 				type: "p",
-				children: "4",
-				key: 4
+				children: "1",
+				key: 1
 			},
 			{
 				type: "p",
-				children: "1",
-				key: 1
+				children: "4",
+				key: 4
 			},
 			{
 				type: "p",

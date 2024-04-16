@@ -188,8 +188,8 @@ export function createRenderer({
 		let lastIndex = 0;
 
 		for (let i = 0; i < newLen; i++) {
-			let find = false;
 			// 记录是否找到了旧节点
+			let find = false;
 			const newNode = n2[i];
 			for (let j = 0; j < oldLen; j++) {
 				const oldNode = n1[j];
