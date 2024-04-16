@@ -115,8 +115,8 @@ export function createRenderer({
 		} else if (isArray(newChildren)) {
 			// 最复杂的情况 都是多个子节点
 			if (isArray(oldChildren)) {
-				diff(oldChildren, newChildren, el);
-				// patchElement(oldChildren, newChildren, el);
+				// simpleDiff(oldChildren, newChildren, el);
+				patchKeyedChildren(oldChildren, newChildren, el);
 			} else {
 				/**
 				 * 没有旧子节点或者旧子节点是文本子节点的情况
@@ -180,9 +180,15 @@ export function createRenderer({
 		insert(el, container, anchor);
 	}
 
-	function diff(n1: VNode[], n2: VNode[], container: RendererElement) {
-		const oldLen = n1.length;
-		const newLen = n2.length;
+	/**
+	 * 简单diff算法
+	 * 核心原理：遍历新节点，内部遍历旧节点，如果有相同的key，则去判断lastIndex和找到的索引的大小
+	 *  如果找到的旧节点的索引小于lastIndex，则说明需要移动
+	 *  否则更新lastIndex为当前遍历到底旧节点索引
+	 */
+	function simpleDiff(oldChildren: VNode[], newChildren: VNode[], container: RendererElement) {
+		const oldLen = oldChildren.length;
+		const newLen = newChildren.length;
 
 		// 记录最大的索引值
 		let lastIndex = 0;
@@ -190,16 +196,16 @@ export function createRenderer({
 		for (let i = 0; i < newLen; i++) {
 			// 记录是否找到了旧节点
 			let find = false;
-			const newNode = n2[i];
+			const newNode = newChildren[i];
 			for (let j = 0; j < oldLen; j++) {
-				const oldNode = n1[j];
+				const oldNode = oldChildren[j];
 				if (oldNode.key === newNode.key) {
 					find = true;
 					patch(oldNode, newNode, container);
 					// 如果找到的旧节点的索引小于最大的索引，则说明需要移动
 					if (j < lastIndex) {
 						// 获取新节点的上一个节点
-						const prevNode = n2[i - 1];
+						const prevNode = newChildren[i - 1];
 						if (prevNode) {
 							// 以上一个节点的下一个兄弟节点作为锚点
 							const anchor = prevNode.el!.nextSibling as HTMLElement;
@@ -214,7 +220,7 @@ export function createRenderer({
 			// 判断是否添加新节点
 			if (!find) {
 				// 获取新节点的上一个节点
-				const prevNode = n2[i - 1];
+				const prevNode = newChildren[i - 1];
 				// 如果有prevNode以上一个节点的下一个兄弟节点作为锚点，
 				// 没有代表需要将元素插入到开始，需要使用container.firstChild作为锚点，不然会将节点插入到已有节点的后面
 				const anchor = prevNode ? prevNode.el.nextSibling : container.firstChild;
@@ -222,12 +228,92 @@ export function createRenderer({
 			}
 			// 删除旧节点
 			for (let j = 0; j < oldLen; j++) {
-				const oldVNode = n1[j];
-				const has = n2.find((v) => v.key === oldVNode.key);
+				const oldVNode = oldChildren[j];
+				const has = newChildren.find((v) => v.key === oldVNode.key);
 				// 如果没有则代表需要删除
 				if (!has) {
 					unmount(oldVNode);
 				}
+			}
+		}
+	}
+
+	/**
+	 * 双端diff算法
+	 */
+	function patchKeyedChildren(
+		oldChildren: VNode[],
+		newChildren: VNode[],
+		container: RendererElement
+	) {
+		// 新旧节点开始结束的索引
+		let newStartIndex = 0;
+		let newEndIndex = newChildren.length - 1;
+		let oldStartIndex = 0;
+		let oldEndIndex = oldChildren.length - 1;
+
+		let newStartVNode = newChildren[newStartIndex];
+		let newEndVNode = newChildren[newEndIndex];
+		let oldStartVNode = oldChildren[oldStartIndex];
+		let oldEndVNode = oldChildren[oldEndIndex];
+
+		// 循环进行双端比较
+		while (newStartIndex <= newEndIndex && oldStartIndex <= oldEndIndex) {
+			// 如果没有新旧节点，则代表被处理过
+			if (!oldStartVNode) {
+				oldStartVNode = oldChildren[++oldStartIndex];
+			} else if (!oldEndVNode) {
+				oldEndVNode = oldChildren[--oldEndIndex];
+			} else if (oldStartVNode.key === newStartVNode.key) {
+				/** 旧头节点与新头节点key相同 */
+				patch(oldStartVNode, newStartVNode, container);
+				oldStartVNode = oldChildren[++oldStartIndex];
+				newStartVNode = newChildren[++newStartIndex];
+			} else if (oldEndVNode.key === newEndVNode.key) {
+				/** 旧尾节点与新尾节点key相同 */
+				patch(oldEndVNode, newEndVNode, container);
+				oldEndVNode = oldChildren[--oldEndIndex];
+				newEndVNode = newChildren[--newEndIndex];
+			} else if (oldStartVNode.key === newEndVNode.key) {
+				/** 旧头节点与新尾节点key相同 */
+				patch(oldStartVNode, newEndVNode, container);
+				// 将oldStartVNode移动到oldEndVNode的后面
+				insert(oldStartVNode.el!, container, oldEndVNode.el.nextSibling as HTMLElement);
+				oldStartVNode = oldChildren[++oldStartIndex];
+				newEndVNode = newChildren[--newEndIndex];
+			} else if (oldEndVNode.key === newStartVNode.key) {
+				/** 旧尾节点与新头节点key相同 */
+				patch(oldEndVNode, newStartVNode, container);
+				// 将oldEndVNode移动到oldStartVNode的前面
+				insert(oldEndVNode.el!, container, oldStartVNode.el as HTMLElement);
+				oldEndVNode = oldChildren[--oldEndIndex];
+				newStartVNode = newChildren[++newStartIndex];
+			} else {
+				/** 非理想情况，头尾都没找到 */
+
+				// 查找新头节点在旧节点中的索引
+				const indexInOld = oldChildren.findIndex((vnode) => vnode.key === newStartVNode.key);
+				if (indexInOld !== -1) {
+					const vnodeToMove = oldChildren[indexInOld];
+					patch(vnodeToMove, newStartVNode, container);
+					insert(vnodeToMove.el!, container, oldStartVNode.el as HTMLElement);
+					oldChildren[indexInOld] = undefined;
+				} else {
+					patch(null, newStartVNode, container, oldStartVNode.el as HTMLElement);
+				}
+				newStartVNode = newChildren[++newStartIndex];
+			}
+		}
+
+		// 新子元素中未处理的节点需要逐一挂载
+		if (newStartIndex <= newEndIndex && oldEndIndex < newStartIndex) {
+			for (let i = newStartIndex; i <= newEndIndex; i++) {
+				patch(null, newChildren[i], container, oldStartVNode.el as HTMLElement);
+			}
+			/** 处理删除节点的情况 */
+		} else if (oldStartIndex <= oldEndIndex && newEndIndex < newStartIndex) {
+			for (let i = oldStartIndex; i <= oldEndIndex; i++) {
+				unmount(oldChildren[i]);
 			}
 		}
 	}
