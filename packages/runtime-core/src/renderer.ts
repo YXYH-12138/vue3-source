@@ -55,7 +55,12 @@ export function createRenderer({
 	}
 
 	/** 对新节点和旧节点进行比较patch */
-	function patch(n1: VNode | undefined, n2: VNode, container: RendererElement) {
+	function patch(
+		n1: VNode | undefined,
+		n2: VNode,
+		container: RendererElement,
+		anchor?: HTMLElement
+	) {
 		//  如果新旧node类型不同，直接卸载即可
 		if (n1 && n1.type !== n2.type) {
 			unmount(n1);
@@ -65,7 +70,7 @@ export function createRenderer({
 		// 处理文本节点
 		if (isString(n2.type)) {
 			if (!n1) {
-				mountElement(n2, container);
+				mountElement(n2, container, anchor);
 			} else {
 				// 更新元素
 				patchElement(n1, n2, container);
@@ -73,7 +78,7 @@ export function createRenderer({
 			// 处理片段
 		} else if (n2.type === Fragment) {
 			if (!n1 && isArray(n2.children)) {
-				n2.children.forEach((v) => patch(undefined, v, container));
+				n2.children.forEach((v) => patch(undefined, v, container, anchor));
 			} else {
 				patchChildren(n1, n2, container);
 			}
@@ -81,7 +86,7 @@ export function createRenderer({
 		} else if (n2.type === TextType) {
 			if (!n1) {
 				const el = (n2.el = createText());
-				insert(el, container);
+				insert(el, container, anchor);
 			} else {
 				const el = (n2.el = n1.el);
 				if (n1.children !== n2.children) {
@@ -154,7 +159,7 @@ export function createRenderer({
 	}
 
 	/** 挂载元素 */
-	function mountElement(vnode: VNode, container: RendererElement) {
+	function mountElement(vnode: VNode, container: RendererElement, anchor?: HTMLElement) {
 		const { type, props, children } = vnode;
 		const el = (vnode.el = createElement(type as string));
 		if (isString(children)) {
@@ -172,7 +177,7 @@ export function createRenderer({
 			}
 		}
 
-		insert(el, container);
+		insert(el, container, anchor);
 	}
 
 	function diff(n1: VNode[], n2: VNode[], el: RendererElement) {
@@ -182,20 +187,22 @@ export function createRenderer({
 		// 记录最大的索引值
 		let lastIndex = 0;
 
-		// debugger;
-
 		for (let i = 0; i < newLen; i++) {
+			let find = false;
+			// 记录是否找到了旧节点
 			const newNode = n2[i];
 			for (let j = 0; j < oldLen; j++) {
 				const oldNode = n1[j];
 				if (oldNode.key === newNode.key) {
+					find = true;
 					patch(oldNode, newNode, el);
 					// 如果找到的旧节点的索引小于最大的索引，则说明需要移动
 					if (j < lastIndex) {
 						// 获取新节点的上一个节点
 						const prevNode = n2[i - 1];
-						const anchor = prevNode.el!.nextSibling as HTMLElement;
 						if (prevNode) {
+							// 以上一个节点的下一个兄弟节点作为锚点
+							const anchor = prevNode.el!.nextSibling as HTMLElement;
 							insert(oldNode.el!, el, anchor);
 						}
 					} else {
@@ -204,25 +211,25 @@ export function createRenderer({
 					break;
 				}
 			}
+			// 判断是否添加新节点
+			if (!find) {
+				// 获取新节点的上一个节点
+				const prevNode = n2[i - 1];
+				if (prevNode) {
+					// 以上一个节点的下一个兄弟节点作为锚点
+					const anchor = prevNode.el!.nextSibling as HTMLElement;
+					patch(null, newNode, el, anchor);
+				}
+			}
+			// 删除旧节点
+			for (let j = 0; j < oldLen; j++) {
+				const oldNode = n1[j];
+				const vnode = n2.find((v) => v.key === oldNode.key);
+				if (!vnode) {
+					unmount(oldNode);
+				}
+			}
 		}
-
-		// const len = Math.min(oldLen, newLen);
-
-		// for (let i = 0; i < len; i++) {
-		// 	patch(n1[i], n2[i], el);
-		// }
-
-		// 如果旧节点比新节点多，则卸载多余的节点
-		// if (oldLen > newLen) {
-		// 	for (let i = len; i < oldLen; i++) {
-		// 		unmount(n1[i]);
-		// 	}
-		// 	// 如果新节点比旧节点多，则添加多余的节点
-		// } else if (newLen > oldLen) {
-		// 	for (let i = len; i < newLen; i++) {
-		// 		patch(null, n2[i], el);
-		// 	}
-		// }
 	}
 
 	return { render };
