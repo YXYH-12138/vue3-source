@@ -116,7 +116,8 @@ export function createRenderer({
 			// 最复杂的情况 都是多个子节点
 			if (isArray(oldChildren)) {
 				// simpleDiff(oldChildren, newChildren, el);
-				patchKeyedChildren(oldChildren, newChildren, el);
+				// patchKeyedChildren(oldChildren, newChildren, el);
+				fastDiff(oldChildren, newChildren, el);
 			} else {
 				/**
 				 * 没有旧子节点或者旧子节点是文本子节点的情况
@@ -186,7 +187,7 @@ export function createRenderer({
 	 *  如果找到的旧节点的索引小于lastIndex，则说明需要移动
 	 *  否则更新lastIndex为当前遍历到底旧节点索引
 	 */
-	function simpleDiff(oldChildren: VNode[], newChildren: VNode[], container: RendererElement) {
+	function s9impleDiff(oldChildren: VNode[], newChildren: VNode[], container: RendererElement) {
 		const oldLen = oldChildren.length;
 		const newLen = newChildren.length;
 
@@ -240,6 +241,7 @@ export function createRenderer({
 
 	/**
 	 * 双端diff算法
+	 *  对比简单diff,执行的DOM移动操作次数更少
 	 */
 	function patchKeyedChildren(
 		oldChildren: VNode[],
@@ -318,7 +320,172 @@ export function createRenderer({
 		}
 	}
 
+	/**
+	 * 快速diff算法，性能比双端diff算法更高
+	 */
+	function fastDiff(oldChildren: VNode[], newChildren: VNode[], container: RendererElement) {
+		// 处理相同的前置节点
+		let startIndex = 0;
+		let newVNode = newChildren[startIndex];
+		let oldVNode = oldChildren[startIndex];
+		while (newVNode && oldVNode && newVNode.key === oldVNode.key) {
+			patch(oldVNode, newVNode, container);
+			startIndex++;
+			newVNode = newChildren[startIndex];
+			oldVNode = oldChildren[startIndex];
+		}
+		// 处理相同的后置节点
+		let oldEndIndex = oldChildren.length - 1;
+		let newEndIndex = newChildren.length - 1;
+		newVNode = newChildren[newEndIndex];
+		oldVNode = oldChildren[oldEndIndex];
+		while (newVNode && oldVNode && newVNode.key === oldVNode.key) {
+			patch(oldVNode, newVNode, container);
+			newVNode = newChildren[--newEndIndex];
+			oldVNode = oldChildren[--oldEndIndex];
+		}
+
+		// 处理新增的情况
+		if (startIndex > oldEndIndex && startIndex <= newEndIndex) {
+			// 后置元素已经处理完，那么newEndIndex+1就是新元素的锚点
+			const anchorIndex = newEndIndex + 1;
+			const anchor = anchorIndex <= newChildren.length ? newChildren[anchorIndex].el : null;
+			while (startIndex <= newEndIndex) {
+				patch(null, newChildren[startIndex++], container, anchor as HTMLElement);
+			}
+		}
+		// 处理删除的情况
+		else if (startIndex > newEndIndex && startIndex <= oldEndIndex) {
+			while (startIndex <= oldEndIndex) {
+				unmount(oldChildren[startIndex++]);
+			}
+		}
+		// 非理想情况
+		else {
+			// 新节点长度
+			const count = newEndIndex - startIndex + 1;
+			// 新的一组子节点中的节点在旧的一组子节点中的位置索引
+			const source = new Array(count).fill(-1);
+
+			// 标志节点是否需要移动
+			let moved = false;
+			let pos = 0;
+
+			// 表示已经更新过的节点数量
+			let patched = 0;
+			// 建立新节点key与索引之间的映射
+			const keyIndex: Record<string, number> = {};
+			for (let i = startIndex; i <= newEndIndex; i++) {
+				const newVNode = newChildren[i];
+				if (newVNode.key) {
+					keyIndex[newVNode.key] = i;
+				}
+			}
+			// 遍历旧节点中未处理的节点
+			for (let i = startIndex; i <= oldEndIndex; i++) {
+				oldVNode = oldChildren[i];
+				// 判断已经更新过的节点数量是否大于需要更新的节点数量
+				if (patched <= count) {
+					const k = keyIndex[oldVNode.key];
+					if (k != undefined) {
+						newVNode = newChildren[k];
+						patch(oldVNode, newVNode, container);
+						source[k - startIndex] = i;
+						patched++;
+						// 在遍历过程中遇到的索引值呈现递增趋势，则说明不需要移动节点，反之则需要
+						if (k < pos) {
+							moved = true;
+						} else {
+							pos = k;
+						}
+					} else {
+						unmount(oldVNode);
+					}
+				} else {
+					unmount(oldVNode);
+				}
+			}
+
+			if (moved) {
+				// 求出最长递增的子序列
+				const seq = getSequence(source);
+
+				let i = count - 1;
+				let s = seq.length - 1;
+
+				for (; i >= 0; i--) {
+					// 如果没有则代表是一个新节点，需要挂载
+					if (source[i] === -1) {
+						const pos = i + startIndex;
+						const nextPos = pos + 1;
+						const anchor = nextPos < newChildren.length ? newChildren[nextPos].el : null;
+
+						patch(null, newChildren[pos], container, anchor as HTMLElement);
+					} else if (i !== seq[s]) {
+						const pos = i + startIndex;
+						const nextPos = pos + 1;
+						const anchor = nextPos < newChildren.length ? newChildren[nextPos].el : null;
+						insert(newChildren[pos].el, container, anchor as HTMLElement);
+					} else {
+						// 节点不需要移动
+						s--;
+					}
+				}
+			}
+		}
+	}
+
 	return { render };
+}
+
+/**
+ * 获取最长递增子序列的索引
+ */
+function getSequence(arr: number[]) {
+	const len = arr.length;
+	// 用于存储每个元素在其对应的最长递增子序列中的前一个元素的下标。
+	const p = arr.slice();
+
+	const result = [0];
+
+	let left, right, mid, j;
+
+	for (let i = 0; i < len; i++) {
+		j = result[result.length - 1];
+		const arrI = arr[i];
+		if (arr[j] < arrI) {
+			// 实际上是前一个索引的值
+			p[i] = j;
+			// 存储在result最后一个索引的值
+			result.push(i);
+		} else {
+			left = 0;
+			right = result.length - 1;
+			while (left < right) {
+				mid = (left + right) >> 1;
+				if (arr[result[mid]] < arrI) {
+					left = mid + 1;
+				} else {
+					right = mid;
+				}
+			}
+			if (arrI < arr[result[left]]) {
+				if (left > 0) {
+					p[i] = result[left - 1];
+				}
+				result[left] = i;
+			}
+		}
+	}
+
+	let u = result.length;
+	let v = result[u - 1]; // 查找数组p 找到最终的索引
+	while (u-- > 0) {
+		result[u] = v;
+		v = p[v];
+	}
+
+	return result;
 }
 
 export function ensureRenderer() {

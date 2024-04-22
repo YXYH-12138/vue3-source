@@ -67,6 +67,7 @@ const arrayInstrumentations: Record<string, Function> = {};
 });
 /**
  * 以下方法间接读取length属性，建立不必要的依赖，需要重写
+ * 注意：如push(1) 会触发getter的arr[arr.length-1]=1操作
  */
 ["push", "pop", "shift", "unshift"].forEach((method) => {
 	const originMethod = Array.prototype[method as any];

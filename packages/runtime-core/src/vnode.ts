@@ -6,7 +6,7 @@ export const Text = Symbol();
 export interface VNode {
 	type: string | Symbol;
 	props?: any | null;
-	key?: string | number | symbol | null;
+	key?: string | number | null;
 	children?: VNode[] | string | null;
 	el?: HostElement;
 }
