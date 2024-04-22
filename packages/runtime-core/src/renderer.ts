@@ -1,4 +1,6 @@
-import { hasOwn, isArray, isString } from "@vue/shared";
+import { effect, reactive } from "@vue/reactivity";
+import { hasOwn, isArray, isObject, isString } from "@vue/shared";
+import schedule from "./schedule";
 import { opts } from "./opts";
 import { type VNode, Text as TextType, Fragment } from "./vnode";
 
@@ -93,6 +95,10 @@ export function createRenderer({
 					setText(el as Text, n2.children as string);
 				}
 			}
+		} else if (isObject(n2.type)) {
+			if (!n1) {
+				mountComponent(n2, container, anchor);
+			}
 		}
 	}
 
@@ -181,13 +187,38 @@ export function createRenderer({
 		insert(el, container, anchor);
 	}
 
+	/** 挂载组件 */
+	function mountComponent(vnode: VNode, container: RendererElement, anchor?: HTMLElement) {
+		const componentOption: any = vnode.type;
+		const { data, render } = componentOption;
+
+		const state = reactive(data());
+
+		const instance: any = { state, isMounted: false, subTree: null };
+		vnode.component = instance;
+
+		effect(
+			() => {
+				const subTree = render.call(state, state);
+				if (!instance.isMounted) {
+					patch(null, subTree, container, anchor);
+					instance.isMounted = true;
+				} else {
+					patch(instance.subTree, subTree, container, anchor);
+				}
+				instance.subTree = subTree;
+			},
+			{ schedule }
+		);
+	}
+
 	/**
 	 * 简单diff算法
 	 * 核心原理：遍历新节点，内部遍历旧节点，如果有相同的key，则去判断lastIndex和找到的索引的大小
 	 *  如果找到的旧节点的索引小于lastIndex，则说明需要移动
 	 *  否则更新lastIndex为当前遍历到底旧节点索引
 	 */
-	function s9impleDiff(oldChildren: VNode[], newChildren: VNode[], container: RendererElement) {
+	function simpleDiff(oldChildren: VNode[], newChildren: VNode[], container: RendererElement) {
 		const oldLen = oldChildren.length;
 		const newLen = newChildren.length;
 
@@ -321,7 +352,11 @@ export function createRenderer({
 	}
 
 	/**
-	 * 快速diff算法，性能比双端diff算法更高
+	 * 快速 Diff 算法在实测中性能最优。它借鉴了文本 Diff 中的预处理思路，
+	 * 先处理新旧两组子节点中相同的前置节点和相同的后置节点。
+	 * 当前置节点和后置节点全部处理完毕后，如果无法简单地通过挂载新节点或者卸载已经不存在的节点来完成更新，
+	 * 则需要根据节点的索引关系，构造出一个最长递增子序列。
+	 * 最长递增子序列所指向的节点即为不需要移动的节点。
 	 */
 	function fastDiff(oldChildren: VNode[], newChildren: VNode[], container: RendererElement) {
 		// 处理相同的前置节点
@@ -344,7 +379,6 @@ export function createRenderer({
 			newVNode = newChildren[--newEndIndex];
 			oldVNode = oldChildren[--oldEndIndex];
 		}
-
 		// 处理新增的情况
 		if (startIndex > oldEndIndex && startIndex <= newEndIndex) {
 			// 后置元素已经处理完，那么newEndIndex+1就是新元素的锚点
@@ -361,7 +395,7 @@ export function createRenderer({
 			}
 		}
 		// 非理想情况
-		else {
+		else if (newEndIndex >= 0 || oldEndIndex >= 0) {
 			// 新节点长度
 			const count = newEndIndex - startIndex + 1;
 			// 新的一组子节点中的节点在旧的一组子节点中的位置索引
