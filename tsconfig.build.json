@@ -5,5 +5,5 @@
 		"emitDeclarationOnly": false,
 		"stripInternal": true
 	},
-	"exclude": ["packages/*/__tests__"]
+	"exclude": ["packages/*/__tests__", "packages/vue"]
 }

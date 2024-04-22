@@ -200,6 +200,7 @@ export function createRenderer({
 		effect(
 			() => {
 				const subTree = render.call(state, state);
+				// 检查是否挂载
 				if (!instance.isMounted) {
 					patch(null, subTree, container, anchor);
 					instance.isMounted = true;

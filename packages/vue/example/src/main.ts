@@ -1,1 +1,2 @@
-import "./diff";
+// import "./diff";
+import "./component";

@@ -17,7 +17,7 @@ function flushJob() {
 	});
 }
 
-export default function schedule(effect: () => any) {
+export default function schedule(effect: any) {
 	jobQueue.add(effect);
 	flushJob();
 }

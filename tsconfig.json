@@ -29,6 +29,6 @@
 		"transpileOnly": true,
 		"esm": true
 	},
-	"include": ["packages/**/*.ts", "scripts/*.ts", "scripts/build.js", "scripts/dev.js"]
+	"include": ["packages/**/*.ts"]
 	// "references": [{ "path": "./tsconfig.node.json" }]
 }
