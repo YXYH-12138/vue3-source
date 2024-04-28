@@ -2,6 +2,7 @@ import { effect, reactive, shallowReactive, shallowReadonly } from "@vue/reactiv
 import { hasOwn, isArray, isFunction, isObject, isOn, isString } from "@vue/shared";
 import schedule from "./schedule";
 import { opts } from "./opts";
+import { setCurrentInstance } from "./life";
 import { type VNode, Text as TextType, Fragment } from "./vnode";
 
 type Invoke = {
@@ -101,9 +102,6 @@ export function createRenderer({
 			} else {
 				patchComponent(n1, n2, anchor);
 			}
-		} else if (isString(n2)) {
-			// 纯文本
-			console.log(n2);
 		}
 	}
 
@@ -197,6 +195,8 @@ export function createRenderer({
 		const componentOption: any = vnode.type;
 		let { data, render, props: propsOption, setup } = componentOption;
 
+		// beforeCreate hook
+
 		const state = data ? reactive(isFunction(data) ? data() : data) : undefined;
 		// 解析props数据
 		const [props, attrs] = resolveProps(propsOption, vnode.props);
@@ -209,9 +209,12 @@ export function createRenderer({
 			isMounted: false,
 			subTree: null,
 			attrs,
-			slots
+			slots,
+			mounted: []
 		};
 		vnode.component = instance;
+
+		// created hook
 
 		// 事件emit
 		const emit = function (event: string, ...payload: any[]) {
@@ -222,8 +225,12 @@ export function createRenderer({
 
 		// 处理setup
 		let setupState: any = null;
-		const setupContext = { attrs, emit, slots };
+		const setupContext = { attrs, slots, emit };
+		// 设置instance，用于注册生命周期
+		setCurrentInstance(instance);
+		// 执行setup函数
 		const setupResult = setup ? setup(shallowReadonly(instance.props), setupContext) : null;
+		setCurrentInstance(null);
 		if (isFunction(setupResult)) {
 			if (render) console.warn("setup return render function the render option will be ignored");
 			render = setupResult;
@@ -262,12 +269,17 @@ export function createRenderer({
 			}
 		});
 
+		const excuteHooks = (hooks?: Array<(this: any) => void>) => {
+			hooks && hooks.forEach((fn) => fn.call(renderContext));
+		};
+
 		effect(
 			() => {
 				const subTree = render.call(renderContext, state, { props: instance.props });
 				// 检查是否挂载
 				if (!instance.isMounted) {
 					patch(null, subTree, container, anchor);
+					excuteHooks(instance.mounted);
 					instance.isMounted = true;
 				} else {
 					patch(instance.subTree, subTree, container, anchor);

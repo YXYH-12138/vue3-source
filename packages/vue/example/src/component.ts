@@ -1,5 +1,5 @@
 import { reactive, ref } from "@vue/reactivity";
-import { ensureRenderer, createVnode, Fragment, Text } from "../../../runtime-core/src";
+import { ensureRenderer, createVnode, Fragment, Text, onMounted } from "../../../runtime-core/src";
 
 const renderer = ensureRenderer();
 
@@ -9,8 +9,12 @@ const childComponent = {
 		const counter = ref(1);
 		const { emit, slots } = setupContext;
 
+		onMounted(() => {
+			console.log("onMounted", document.querySelector(".hw"));
+		});
+
 		return () => {
-			const vnodes = createVnode("div", undefined, [
+			const vnodes = createVnode("div", { class: "hw" }, [
 				createVnode("span", null, counter.value),
 				createVnode(
 					"button",
