@@ -23,6 +23,10 @@ export function createVnode(
 		children += "";
 	}
 
+	if (type == undefined) {
+		type = Text;
+	}
+
 	return {
 		type,
 		props,

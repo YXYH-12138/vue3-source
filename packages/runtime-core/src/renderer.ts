@@ -2,7 +2,7 @@ import { effect, reactive, shallowReactive, shallowReadonly } from "@vue/reactiv
 import { hasOwn, isArray, isFunction, isObject, isOn, isString } from "@vue/shared";
 import schedule from "./schedule";
 import { opts } from "./opts";
-import { setCurrentInstance } from "./life";
+import { setCurrentInstance } from "./apiLifecycle";
 import { type VNode, Text as TextType, Fragment } from "./vnode";
 
 type Invoke = {
@@ -48,10 +48,17 @@ export function createRenderer({
 		container._vnode = vNode;
 	}
 
+	const excuteHooks = (hooks?: Array<(this: any) => void>, context?: any) => {
+		hooks && hooks.forEach((fn) => fn.call(context));
+	};
+
 	// 卸载
 	function unmount(vnode: VNode) {
 		if (vnode.type === Fragment) {
 			(vnode.children as VNode[]).forEach((v) => unmount(v));
+		} else if (isObject(vnode.type)) {
+			unmount(vnode.component.subTree);
+			excuteHooks(vnode.component.unMounted);
 		} else {
 			remove(vnode.el);
 		}
@@ -124,9 +131,13 @@ export function createRenderer({
 		} else if (isArray(newChildren)) {
 			// 最复杂的情况 都是多个子节点
 			if (isArray(oldChildren)) {
-				// simpleDiff(oldChildren, newChildren, el);
-				// patchKeyedChildren(oldChildren, newChildren, el);
-				fastDiff(oldChildren, newChildren, el);
+				if (oldChildren.length === 1 && oldChildren.length === newChildren.length) {
+					patchElement(oldChildren[0], newChildren[0], el);
+				} else {
+					fastDiff(oldChildren, newChildren, el);
+					// simpleDiff(oldChildren, newChildren, el);
+					// patchKeyedChildren(oldChildren, newChildren, el);
+				}
 			} else {
 				/**
 				 * 没有旧子节点或者旧子节点是文本子节点的情况
@@ -210,7 +221,8 @@ export function createRenderer({
 			subTree: null,
 			attrs,
 			slots,
-			mounted: []
+			mounted: [],
+			unMounted: []
 		};
 		vnode.component = instance;
 
@@ -269,17 +281,13 @@ export function createRenderer({
 			}
 		});
 
-		const excuteHooks = (hooks?: Array<(this: any) => void>) => {
-			hooks && hooks.forEach((fn) => fn.call(renderContext));
-		};
-
 		effect(
 			() => {
 				const subTree = render.call(renderContext, state, { props: instance.props });
 				// 检查是否挂载
 				if (!instance.isMounted) {
 					patch(null, subTree, container, anchor);
-					excuteHooks(instance.mounted);
+					excuteHooks(instance.mounted, renderContext);
 					instance.isMounted = true;
 				} else {
 					patch(instance.subTree, subTree, container, anchor);
@@ -467,16 +475,21 @@ export function createRenderer({
 			newVNode = newChildren[startIndex];
 			oldVNode = oldChildren[startIndex];
 		}
+
 		// 处理相同的后置节点
 		let oldEndIndex = oldChildren.length - 1;
 		let newEndIndex = newChildren.length - 1;
-		newVNode = newChildren[newEndIndex];
-		oldVNode = oldChildren[oldEndIndex];
-		while (newVNode && oldVNode && newVNode.key === oldVNode.key) {
-			patch(oldVNode, newVNode, container);
-			newVNode = newChildren[--newEndIndex];
-			oldVNode = oldChildren[--oldEndIndex];
+		// 如果前置节点已经处理完了，则不需要处理后置节点了
+		if (newVNode || newVNode) {
+			newVNode = newChildren[newEndIndex];
+			oldVNode = oldChildren[oldEndIndex];
+			while (newVNode && oldVNode && newVNode.key === oldVNode.key) {
+				patch(oldVNode, newVNode, container);
+				newVNode = newChildren[--newEndIndex];
+				oldVNode = oldChildren[--oldEndIndex];
+			}
 		}
+
 		// 处理新增的情况
 		if (startIndex > oldEndIndex && startIndex <= newEndIndex) {
 			// 后置元素已经处理完，那么newEndIndex+1就是新元素的锚点
@@ -586,11 +599,14 @@ function hasPropsChanged(oldProps: any, newProps: any) {
 }
 
 /** 根据子组件的props和父组件传递的props解析出props和attrs */
-function resolveProps(options: any, propsData: any) {
+function resolveProps(
+	options: Record<string, any> | undefined,
+	propsData: Record<string, any> = {}
+) {
 	const props: Record<string, any> = {};
 	const attrs: Record<string, any> = {};
 	for (const key in propsData) {
-		if (key in options || isOn(key)) {
+		if (options && (key in options || isOn(key))) {
 			props[key] = propsData[key];
 		} else {
 			attrs[key] = propsData[key];
