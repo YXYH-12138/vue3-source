@@ -1,5 +1,5 @@
-import { effect, reactive } from "@vue/reactivity";
-import { hasOwn, isArray, isObject, isString } from "@vue/shared";
+import { effect, reactive, shallowReactive } from "@vue/reactivity";
+import { hasOwn, isArray, isFunction, isObject, isString } from "@vue/shared";
 import schedule from "./schedule";
 import { opts } from "./opts";
 import { type VNode, Text as TextType, Fragment } from "./vnode";
@@ -98,6 +98,8 @@ export function createRenderer({
 		} else if (isObject(n2.type)) {
 			if (!n1) {
 				mountComponent(n2, container, anchor);
+			} else {
+				patchComponent(n1, n2, anchor);
 			}
 		}
 	}
@@ -190,16 +192,51 @@ export function createRenderer({
 	/** 挂载组件 */
 	function mountComponent(vnode: VNode, container: RendererElement, anchor?: HTMLElement) {
 		const componentOption: any = vnode.type;
-		const { data, render } = componentOption;
+		const { data, render, props: propsOption } = componentOption;
 
-		const state = reactive(data());
+		const state = data ? reactive(isFunction(data) ? data() : data) : undefined;
+		// 解析props数据
+		const [props, attrs] = resolveProps(propsOption, vnode.props);
 
-		const instance: any = { state, isMounted: false, subTree: null };
+		const instance: any = {
+			state,
+			props: shallowReactive(props),
+			isMounted: false,
+			subTree: null,
+			attrs
+		};
 		vnode.component = instance;
+
+		// 代理创建一个render函数的上下文
+		const renderContext = new Proxy(instance, {
+			get(target, p, receiver) {
+				const { state, props } = target;
+				if (state && p in state) {
+					return state[p];
+				} else if (props && p in props) {
+					return props[p];
+				} else {
+					console.warn(`not exist`);
+				}
+			},
+			set(target, p, newValue, receiver) {
+				const { state, props } = target;
+				if (state && p in state) {
+					state[p] = newValue;
+				} else if (props && p in props) {
+					console.warn(`Attempting to mutate prop "${p.toString()}". Props are readonly.`);
+					return false;
+				} else {
+					console.warn(`not exist`);
+					return false;
+				}
+				return true;
+			}
+		});
 
 		effect(
 			() => {
-				const subTree = render.call(state, state);
+				const subTree = render.call(renderContext, state, { props: instance.props });
 				// 检查是否挂载
 				if (!instance.isMounted) {
 					patch(null, subTree, container, anchor);
@@ -211,6 +248,26 @@ export function createRenderer({
 			},
 			{ schedule }
 		);
+	}
+
+	/** 更新组件 */
+	function patchComponent(n1: VNode, n2: VNode, anchor: HTMLElement) {
+		const instance = (n2.component = n1.component);
+		const { props } = instance;
+		// 判断为子组件传递的props是否改变
+		if (hasPropsChanged(n1.props, n2.props)) {
+			const [nextProps] = resolveProps((n2.type as any).props, n2.props);
+			// 更新props
+			for (let key in nextProps) {
+				props[key] = nextProps[key];
+			}
+			// 删除不存在的props
+			for (let key in props) {
+				if (!(key in nextProps)) {
+					delete props[key];
+				}
+			}
+		}
 	}
 
 	/**
@@ -471,6 +528,34 @@ export function createRenderer({
 	}
 
 	return { render };
+}
+
+function hasPropsChanged(oldProps: any, newProps: any) {
+	const keys = Object.keys(newProps);
+	if (keys.length !== Object.keys(oldProps).length) return true;
+
+	for (let i = 0; i < keys.length; i++) {
+		const key = keys[i];
+		if (newProps[key] !== oldProps[key]) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+function resolveProps(options: any, propsData: any) {
+	const props: Record<string, any> = {};
+	const attrs: Record<string, any> = {};
+	for (const key in propsData) {
+		if (key in options) {
+			props[key] = propsData[key];
+		} else {
+			attrs[key] = propsData[key];
+		}
+	}
+
+	return [props, attrs];
 }
 
 /**

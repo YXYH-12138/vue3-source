@@ -11,10 +11,11 @@ export interface VNode {
 	children?: VNode[] | string | null;
 	el?: HostElement;
 	component?: any;
+	[key: string]: any;
 }
 
 export function createVnode(
-	type: string | Symbol,
+	type: string | Symbol | object,
 	props?: any | null,
 	children?: VNode[] | string | null
 ): VNode {
@@ -26,6 +27,6 @@ export function createVnode(
 		type,
 		props,
 		children,
-		key: props && props.key
+		key: props ? props.key : undefined
 	};
 }
