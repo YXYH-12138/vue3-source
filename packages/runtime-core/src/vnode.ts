@@ -5,7 +5,7 @@ export const Fragment = Symbol();
 export const Text = Symbol();
 
 export interface VNode {
-	type: string | Symbol | object;
+	type?: string | Symbol | object;
 	props?: any | null;
 	key?: string | number | null;
 	children?: VNode[] | string | null | number;

@@ -21,8 +21,8 @@ export const opts: RendererOptions = {
 			parent.removeChild(el);
 		}
 	},
-	createText() {
-		return document.createTextNode("");
+	createText(text?: string) {
+		return document.createTextNode(text);
 	},
 	setText(el, text) {
 		el.nodeValue = text;

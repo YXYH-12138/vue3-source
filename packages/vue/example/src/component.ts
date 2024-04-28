@@ -1,5 +1,5 @@
 import { reactive, ref } from "@vue/reactivity";
-import { ensureRenderer, createVnode, Fragment } from "../../../runtime-core/src";
+import { ensureRenderer, createVnode, Fragment, Text } from "../../../runtime-core/src";
 
 const renderer = ensureRenderer();
 
@@ -7,10 +7,10 @@ const childComponent = {
 	props: { title: String },
 	setup(props: any, setupContext: any) {
 		const counter = ref(1);
-		const { emit } = setupContext;
+		const { emit, slots } = setupContext;
 
 		return () => {
-			return createVnode("div", undefined, [
+			const vnodes = createVnode("div", undefined, [
 				createVnode("span", null, counter.value),
 				createVnode(
 					"button",
@@ -32,8 +32,10 @@ const childComponent = {
 					},
 					"-1"
 				),
-				createVnode("span", undefined, props.title)
+				createVnode("span", undefined, props.title),
+				createVnode(Text, null, slots[0]?.default())
 			]);
+			return vnodes;
 		};
 	}
 };
@@ -54,13 +56,17 @@ const patentComponent = {
 					},
 					"change title" + this.foo
 				),
-				createVnode(childComponent, {
-					title: this.title,
-					foo: 111,
-					onChange: (val: any) => {
-						this.foo = val;
-					}
-				})
+				createVnode(
+					childComponent,
+					{
+						title: this.title,
+						foo: 111,
+						onChange: (val: any) => {
+							this.foo = val;
+						}
+					},
+					[{ default: () => "这是插槽内容" }]
+				)
 			]);
 		}
 	}

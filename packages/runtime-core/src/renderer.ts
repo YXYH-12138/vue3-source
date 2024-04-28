@@ -22,7 +22,7 @@ export interface RendererOptions {
 	patchProp: (el: RendererElement, key: string, prevValue: any, nextValue: any) => void;
 	insert: (el: RendererElement | Text, parent: RendererElement, anchor?: HTMLElement) => void;
 	remove: (el: HostElement) => void;
-	createText: () => Text;
+	createText: (text?: string) => Text;
 	setText: (el: Text, text: string) => void;
 	setElementText: (el: HTMLElement, text: string) => void;
 }
@@ -87,7 +87,7 @@ export function createRenderer({
 			// 处理文本节点
 		} else if (n2.type === TextType) {
 			if (!n1) {
-				const el = (n2.el = createText());
+				const el = (n2.el = createText(n2.children as string));
 				insert(el, container, anchor);
 			} else {
 				const el = (n2.el = n1.el);
@@ -101,6 +101,9 @@ export function createRenderer({
 			} else {
 				patchComponent(n1, n2, anchor);
 			}
+		} else if (isString(n2)) {
+			// 纯文本
+			console.log(n2);
 		}
 	}
 
@@ -197,12 +200,16 @@ export function createRenderer({
 		const state = data ? reactive(isFunction(data) ? data() : data) : undefined;
 		// 解析props数据
 		const [props, attrs] = resolveProps(propsOption, vnode.props);
+
+		const slots = vnode.children ?? {};
+
 		const instance: any = {
 			state,
 			props: shallowReactive(props),
 			isMounted: false,
 			subTree: null,
-			attrs
+			attrs,
+			slots
 		};
 		vnode.component = instance;
 
@@ -215,7 +222,7 @@ export function createRenderer({
 
 		// 处理setup
 		let setupState: any = null;
-		const setupContext = { attrs, emit };
+		const setupContext = { attrs, emit, slots };
 		const setupResult = setup ? setup(shallowReadonly(instance.props), setupContext) : null;
 		if (isFunction(setupResult)) {
 			if (render) console.warn("setup return render function the render option will be ignored");
