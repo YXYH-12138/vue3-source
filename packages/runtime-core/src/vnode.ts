@@ -8,7 +8,7 @@ export interface VNode {
 	type: string | Symbol | object;
 	props?: any | null;
 	key?: string | number | null;
-	children?: VNode[] | string | null;
+	children?: VNode[] | string | null | number;
 	el?: HostElement;
 	component?: any;
 	[key: string]: any;
@@ -17,7 +17,7 @@ export interface VNode {
 export function createVnode(
 	type: string | Symbol | object,
 	props?: any | null,
-	children?: VNode[] | string | null
+	children?: VNode[] | string | null | number
 ): VNode {
 	if (!isObject(children)) {
 		children += "";

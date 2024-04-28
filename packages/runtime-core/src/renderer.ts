@@ -1,5 +1,5 @@
-import { effect, reactive, shallowReactive } from "@vue/reactivity";
-import { hasOwn, isArray, isFunction, isObject, isString } from "@vue/shared";
+import { effect, reactive, shallowReactive, shallowReadonly } from "@vue/reactivity";
+import { hasOwn, isArray, isFunction, isObject, isOn, isString } from "@vue/shared";
 import schedule from "./schedule";
 import { opts } from "./opts";
 import { type VNode, Text as TextType, Fragment } from "./vnode";
@@ -192,12 +192,11 @@ export function createRenderer({
 	/** 挂载组件 */
 	function mountComponent(vnode: VNode, container: RendererElement, anchor?: HTMLElement) {
 		const componentOption: any = vnode.type;
-		const { data, render, props: propsOption } = componentOption;
+		let { data, render, props: propsOption, setup } = componentOption;
 
 		const state = data ? reactive(isFunction(data) ? data() : data) : undefined;
 		// 解析props数据
 		const [props, attrs] = resolveProps(propsOption, vnode.props);
-
 		const instance: any = {
 			state,
 			props: shallowReactive(props),
@@ -207,22 +206,44 @@ export function createRenderer({
 		};
 		vnode.component = instance;
 
+		// 事件emit
+		const emit = function (event: string, ...payload: any[]) {
+			const eventName = `on${event[0].toUpperCase() + event.slice(1)}`;
+			const handler = props[eventName];
+			handler && handler(...payload);
+		};
+
+		// 处理setup
+		let setupState: any = null;
+		const setupContext = { attrs, emit };
+		const setupResult = setup ? setup(shallowReadonly(instance.props), setupContext) : null;
+		if (isFunction(setupResult)) {
+			if (render) console.warn("setup return render function the render option will be ignored");
+			render = setupResult;
+		} else {
+			setupState = setupResult;
+		}
+
 		// 代理创建一个render函数的上下文
 		const renderContext = new Proxy(instance, {
-			get(target, p, receiver) {
+			get(target, p) {
 				const { state, props } = target;
 				if (state && p in state) {
 					return state[p];
 				} else if (props && p in props) {
 					return props[p];
+				} else if (setupState && p in setupState) {
+					return setupState[p];
 				} else {
 					console.warn(`not exist`);
 				}
 			},
-			set(target, p, newValue, receiver) {
+			set(target, p, newValue) {
 				const { state, props } = target;
 				if (state && p in state) {
 					state[p] = newValue;
+				} else if (setupState && p in setupState) {
+					setupState[p] = newValue;
 				} else if (props && p in props) {
 					console.warn(`Attempting to mutate prop "${p.toString()}". Props are readonly.`);
 					return false;
@@ -530,6 +551,7 @@ export function createRenderer({
 	return { render };
 }
 
+/** props是否有变化 */
 function hasPropsChanged(oldProps: any, newProps: any) {
 	const keys = Object.keys(newProps);
 	if (keys.length !== Object.keys(oldProps).length) return true;
@@ -544,11 +566,12 @@ function hasPropsChanged(oldProps: any, newProps: any) {
 	return false;
 }
 
+/** 根据子组件的props和父组件传递的props解析出props和attrs */
 function resolveProps(options: any, propsData: any) {
 	const props: Record<string, any> = {};
 	const attrs: Record<string, any> = {};
 	for (const key in propsData) {
-		if (key in options) {
+		if (key in options || isOn(key)) {
 			props[key] = propsData[key];
 		} else {
 			attrs[key] = propsData[key];
