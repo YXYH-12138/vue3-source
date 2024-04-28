@@ -476,18 +476,18 @@ export function createRenderer({
 			oldVNode = oldChildren[startIndex];
 		}
 
+		// 如果前置节点已经处理完所有的节点了，则不需要任何后续处理了
+		if (!newVNode && !newVNode) return;
+
 		// 处理相同的后置节点
 		let oldEndIndex = oldChildren.length - 1;
 		let newEndIndex = newChildren.length - 1;
-		// 如果前置节点已经处理完了，则不需要处理后置节点了
-		if (newVNode || newVNode) {
-			newVNode = newChildren[newEndIndex];
-			oldVNode = oldChildren[oldEndIndex];
-			while (newVNode && oldVNode && newVNode.key === oldVNode.key) {
-				patch(oldVNode, newVNode, container);
-				newVNode = newChildren[--newEndIndex];
-				oldVNode = oldChildren[--oldEndIndex];
-			}
+		newVNode = newChildren[newEndIndex];
+		oldVNode = oldChildren[oldEndIndex];
+		while (newVNode && oldVNode && newVNode.key === oldVNode.key) {
+			patch(oldVNode, newVNode, container);
+			newVNode = newChildren[--newEndIndex];
+			oldVNode = oldChildren[--oldEndIndex];
 		}
 
 		// 处理新增的情况
