@@ -1,5 +1,5 @@
-import { effect, reactive, shallowReactive, shallowReadonly } from "@vue/reactivity";
-import { hasOwn, isArray, isFunction, isObject, isOn, isString } from "@vue/shared";
+import { effect, reactive, shallowReactive, shallowReadonly } from "@mini-vue/reactivity";
+import { hasOwn, isArray, isFunction, isObject, isOn, isString } from "@mini-vue/shared";
 import schedule from "./schedule";
 import { opts } from "./opts";
 import { setCurrentInstance } from "./apiLifecycle";

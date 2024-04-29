@@ -1,4 +1,4 @@
-import { isMap } from "@vue/shared";
+import { isMap } from "@mini-vue/shared";
 import { ITERATE_KEY, MAP_KEYS_ITERATE_KEY } from "./baseHandlers";
 import { TriggerOpTypes } from "./operations";
 

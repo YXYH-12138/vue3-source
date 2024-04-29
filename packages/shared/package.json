@@ -1,7 +1,7 @@
 {
-	"name": "@vue/shared",
+	"name": "@mini-vue/shared",
 	"version": "1.0.0",
-	"description": "@vue/shared",
+	"description": "@mini-vue/shared",
 	"main": "dist/shared.cjs.js",
 	"module": "dist/shared.esm-bundler.js",
 	"types": "dist/shared.d.ts",

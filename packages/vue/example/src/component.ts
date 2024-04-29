@@ -1,5 +1,12 @@
-import { reactive, ref } from "@vue/reactivity";
-import { ensureRenderer, createVnode, Fragment, Text, onMounted } from "../../../runtime-core/src";
+import { reactive, ref } from "@mini-vue/reactivity";
+import {
+	ensureRenderer,
+	createVnode,
+	Fragment,
+	defineAsyncComponent,
+	onMounted,
+	onUnmounted
+} from "../../../runtime-core/src";
 
 const renderer = ensureRenderer();
 
@@ -11,6 +18,10 @@ const childComponent = {
 
 		onMounted(() => {
 			console.log("onMounted", document.querySelector(".hw"));
+		});
+
+		onUnmounted(() => {
+			console.log("onUnmounted");
 		});
 
 		return () => {
@@ -37,12 +48,50 @@ const childComponent = {
 					"-1"
 				),
 				createVnode("span", undefined, props.title),
-				createVnode(Text, null, slots[0]?.default())
+				createVnode(null, null, slots[0]?.default())
 			]);
 			return vnodes;
 		};
 	}
 };
+
+let _attempts = 0;
+function mockAsyncComponentLoader() {
+	return new Promise<any>((resolve, reject) => {
+		setTimeout(() => {
+			if (_attempts < 2) {
+				reject("error");
+			} else {
+				resolve(childComponent);
+			}
+		}, 1000);
+	});
+}
+
+const AsyncComp = defineAsyncComponent({
+	loader: mockAsyncComponentLoader,
+	// timeout: 2000,
+	onError(error, retry, fail, attempts) {
+		_attempts = attempts;
+		if (attempts < 3) {
+			retry();
+		} else {
+			fail();
+		}
+	},
+	errorComponent: {
+		props: { error: Error },
+		setup(props: any) {
+			console.warn(props.error);
+			return () => createVnode(null, null, "这是我的error");
+		}
+	},
+	loadingComponent: {
+		setup() {
+			return () => createVnode(null, null, "这是我的loading");
+		}
+	}
+});
 
 const patentComponent = {
 	type: {
@@ -60,17 +109,19 @@ const patentComponent = {
 					},
 					"change title" + this.foo
 				),
-				createVnode(
-					childComponent,
-					{
-						title: this.title,
-						foo: 111,
-						onChange: (val: any) => {
-							this.foo = val;
-						}
-					},
-					[{ default: () => "这是插槽内容" }]
-				)
+				this.foo < 1
+					? createVnode(
+							AsyncComp,
+							{
+								title: this.title,
+								foo: 111,
+								onChange: (val: any) => {
+									this.foo = val;
+								}
+							},
+							[{ default: () => "这是插槽内容" }]
+					  )
+					: createVnode("div", null, 123)
 			]);
 		}
 	}

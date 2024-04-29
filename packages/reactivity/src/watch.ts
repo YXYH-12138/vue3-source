@@ -1,4 +1,4 @@
-import { isFunction, isObject } from "@vue/shared";
+import { isFunction, isObject } from "@mini-vue/shared";
 import { effect } from "./effect";
 
 type OnCleanup = (cleanupFn: () => void) => void;

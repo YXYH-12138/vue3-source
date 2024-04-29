@@ -1,7 +1,7 @@
 {
-	"name": "@vue/reactivity",
+	"name": "@mini-vue/reactivity",
 	"version": "1.0.0",
-	"description": "@vue/reactivity",
+	"description": "@mini-vue/reactivity",
 	"main": "dist/reactivity.cjs.js",
 	"module": "dist/reactivity.esm-bundler.js",
 	"types": "dist/reactivity.d.ts",
@@ -22,6 +22,6 @@
 		]
 	},
 	"dependencies": {
-		"@vue/shared": "workspace:*"
+		"@mini-vue/shared": "workspace:*"
 	}
 }

@@ -1,4 +1,4 @@
-import { isObject } from "@vue/shared";
+import { isObject } from "@mini-vue/shared";
 import type { HostElement } from "./renderer";
 
 export const Fragment = Symbol();

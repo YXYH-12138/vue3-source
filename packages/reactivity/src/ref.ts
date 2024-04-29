@@ -1,4 +1,4 @@
-import { hasChanged, isObject } from "@vue/shared";
+import { hasChanged, isObject } from "@mini-vue/shared";
 import { toReactive } from "./reactive";
 import { track, trigger } from "./effect";
 
@@ -14,7 +14,7 @@ export function ref<T>(target: T) {
 	return createRef<T>(target, false);
 }
 
-export function shallowRef<T>(target: T) {
+export function shallowRef<T>(target?: T) {
 	return createRef<T>(target, true);
 }
 

@@ -1,4 +1,4 @@
-import { def, isObject, toRawType } from "@vue/shared";
+import { def, isObject, toRawType } from "@mini-vue/shared";
 import {
 	nomoralHandlers,
 	readonlyHandlers,

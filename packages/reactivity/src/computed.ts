@@ -1,4 +1,4 @@
-import { NOOP, isFunction } from "@vue/shared";
+import { NOOP, isFunction } from "@mini-vue/shared";
 import { type ReactiveEffect, effect, track, trigger } from "./effect";
 
 export type ComputedGetter<T> = (oldValue?: T) => T;

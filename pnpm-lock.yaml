@@ -50,13 +50,32 @@ importers:
       vite: 5.2.9_@types+node@18.19.31
       vitest: 1.5.0_@types+node@18.19.31
 
+  packages/reactivity:
+    specifiers:
+      '@mini-vue/shared': workspace:*
+    dependencies:
+      '@mini-vue/shared': link:../shared
+
   packages/runtime-core:
     specifiers:
-      '@vue/reactivity': '*'
-      '@vue/shared': workspace:*
+      '@mini-vue/reactivity': '*'
+      '@mini-vue/shared': workspace:*
     dependencies:
-      '@vue/reactivity': 3.4.23
-      '@vue/shared': link:../shared
+      '@mini-vue/reactivity': link:../reactivity
+      '@mini-vue/shared': link:../shared
+
+  packages/shared:
+    specifiers: {}
+
+  packages/vue:
+    specifiers:
+      '@mini-vue/reactivity': workspace:*
+      '@mini-vue/runtime-core': workspace:*
+      '@mini-vue/shared': workspace:*
+    dependencies:
+      '@mini-vue/reactivity': link:../reactivity
+      '@mini-vue/runtime-core': link:../runtime-core
+      '@mini-vue/shared': link:../shared
 
 packages:
 
@@ -871,16 +890,6 @@ packages:
       loupe: 2.3.7
       pretty-format: 29.7.0
     dev: true
-
-  /@vue/reactivity/3.4.23:
-    resolution: {integrity: sha512-GlXR9PL+23fQ3IqnbSQ8OQKLodjqCyoCrmdLKZk3BP7jN6prWheAfU7a3mrltewTkoBm+N7qMEb372VHIkQRMQ==}
-    dependencies:
-      '@vue/shared': 3.4.23
-    dev: false
-
-  /@vue/shared/3.4.23:
-    resolution: {integrity: sha512-wBQ0gvf+SMwsCQOyusNw/GoXPV47WGd1xB5A1Pgzy0sQ3Bi5r5xm3n+92y3gCnB3MWqnRDdvfkRGxhKtbBRNgg==}
-    dev: false
 
   /acorn-jsx/5.3.2_acorn@8.11.3:
     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}

@@ -1,4 +1,4 @@
-import { isArray, isOn } from "@vue/shared";
+import { isArray, isOn } from "@mini-vue/shared";
 import type { RendererOptions } from "./renderer";
 
 /** 判断是否应该设置DOM Properties */

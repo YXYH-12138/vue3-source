@@ -1,4 +1,13 @@
-import { extend, hasChanged, hasOwn, isArray, isMap, isObject, isSet, isSymbol } from "@vue/shared";
+import {
+	extend,
+	hasChanged,
+	hasOwn,
+	isArray,
+	isMap,
+	isObject,
+	isSet,
+	isSymbol
+} from "@mini-vue/shared";
 import { enableTracking, pauseTracking, track, trigger } from "./effect";
 import { TriggerOpTypes } from "./operations";
 import { ReactiveFlags, reactive, readonly, toRaw, toReactive } from "./reactive";

@@ -10,9 +10,8 @@
 	"author": "",
 	"license": "ISC",
 	"dependencies": {
-		"@vue/reactivity": "workspace:*",
-		"@vue/shared": "workspace:*",
-		"@vue/runtime-core": "workspace:*",
-		"@vue/runtime-dom": "workspace:*"
+		"@mini-vue/reactivity": "workspace:*",
+		"@mini-vue/shared": "workspace:*",
+		"@mini-vue/runtime-core": "workspace:*"
 	}
 }

@@ -1,7 +1,7 @@
 {
-	"name": "@vue/runtime-core",
+	"name": "@mini-vue/runtime-core",
 	"version": "1.0.0",
-	"description": "@vue/runtime-core",
+	"description": "@mini-vue/runtime-core",
 	"main": "dist/runtime-core.cjs.js",
 	"module": "dist/runtime-core.esm-bundler.js",
 	"types": "dist/runtime-core.d.ts",
@@ -19,7 +19,7 @@
 		]
 	},
 	"dependencies": {
-		"@vue/reactivity": "*",
-		"@vue/shared": "workspace:*"
+		"@mini-vue/reactivity": "*",
+		"@mini-vue/shared": "workspace:*"
 	}
 }
