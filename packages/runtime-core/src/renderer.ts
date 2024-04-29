@@ -2,7 +2,7 @@ import { effect, reactive, shallowReactive, shallowReadonly } from "@mini-vue/re
 import { hasOwn, isArray, isFunction, isObject, isOn, isString } from "@mini-vue/shared";
 import schedule from "./schedule";
 import { opts } from "./opts";
-import { setCurrentInstance } from "./apiLifecycle";
+import { setCurrentInstance } from "./component";
 import { type VNode, Text as TextType, Fragment } from "./vnode";
 
 type Invoke = {

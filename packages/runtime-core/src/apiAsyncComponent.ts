@@ -2,6 +2,7 @@ import { ref, shallowRef } from "@mini-vue/reactivity";
 import { isFunction } from "@mini-vue/shared";
 import { createVnode } from "./vnode";
 import { onUnmounted } from "./apiLifecycle";
+import { defineComponent } from "./apiDefineComponent";
 
 type Component = object;
 
@@ -48,9 +49,9 @@ export function defineAsyncComponent<T extends Component = any>(
 		});
 	}
 
-	return {
+	return defineComponent({
 		name: "AsyncComponentWarpper",
-		setup(props: any, { attrs, slots }: any) {
+		setup(props, { attrs, slots }) {
 			// 是否加载完成
 			const loaded = ref(false);
 			// 加载loading
@@ -101,5 +102,5 @@ export function defineAsyncComponent<T extends Component = any>(
 				}
 			};
 		}
-	};
+	});
 }

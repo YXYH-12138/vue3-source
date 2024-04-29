@@ -1,12 +1,9 @@
-let currentInstance: any;
+import { getCurrentInstance } from "./component";
 
 type LifecycleFn = (this: any) => void;
 
-export function setCurrentInstance(instance: any) {
-	currentInstance = instance;
-}
-
 export function onMounted(fn: LifecycleFn) {
+	const currentInstance = getCurrentInstance();
 	if (currentInstance) {
 		currentInstance.mounted.push(fn);
 	} else {
@@ -15,6 +12,7 @@ export function onMounted(fn: LifecycleFn) {
 }
 
 export function onUnmounted(fn: LifecycleFn) {
+	const currentInstance = getCurrentInstance();
 	if (currentInstance) {
 		currentInstance.unMounted.push(fn);
 	} else {
