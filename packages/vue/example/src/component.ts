@@ -10,6 +10,13 @@ import {
 
 const renderer = ensureRenderer();
 
+function functionalComp(props: any) {
+	return createVnode("div", null, props.title);
+}
+(functionalComp as any).props = {
+	title: String
+};
+
 const childComponent = {
 	props: { title: String },
 	setup(props: any, setupContext: any) {
@@ -59,12 +66,12 @@ let _attempts = 0;
 function mockAsyncComponentLoader() {
 	return new Promise<any>((resolve, reject) => {
 		setTimeout(() => {
-			if (_attempts < 2) {
+			if (_attempts < 0) {
 				reject("error");
 			} else {
 				resolve(childComponent);
 			}
-		}, 1000);
+		}, 500);
 	});
 }
 
@@ -121,7 +128,8 @@ const patentComponent = {
 							},
 							[{ default: () => "这是插槽内容" }]
 					  )
-					: createVnode("div", null, 123)
+					: createVnode("div", null, 123),
+				createVnode(functionalComp, { title: this.title })
 			]);
 		}
 	}

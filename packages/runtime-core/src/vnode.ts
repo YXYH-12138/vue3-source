@@ -19,7 +19,7 @@ export function createVnode(
 	props?: any | null,
 	children?: VNode[] | string | null | number
 ): VNode {
-	if (!isObject(children)) {
+	if (!isObject(children) && children != undefined) {
 		children += "";
 	}
 

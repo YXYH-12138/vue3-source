@@ -103,7 +103,7 @@ export function createRenderer({
 					setText(el as Text, n2.children as string);
 				}
 			}
-		} else if (isObject(n2.type)) {
+		} else if (isObject(n2.type) || isFunction(n2.type)) {
 			if (!n1) {
 				mountComponent(n2, container, anchor);
 			} else {
@@ -203,7 +203,13 @@ export function createRenderer({
 
 	/** 挂载组件 */
 	function mountComponent(vnode: VNode, container: RendererElement, anchor?: HTMLElement) {
-		const componentOption: any = vnode.type;
+		let componentOption: any = vnode.type;
+
+		// 如果是函数式组件
+		if (isFunction(componentOption)) {
+			componentOption = { render: componentOption, props: componentOption.props };
+		}
+
 		let { data, render, props: propsOption, setup } = componentOption;
 
 		// beforeCreate hook
@@ -283,7 +289,7 @@ export function createRenderer({
 
 		effect(
 			() => {
-				const subTree = render.call(renderContext, state, { props: instance.props });
+				const subTree = render.call(renderContext, instance.props);
 				// 检查是否挂载
 				if (!instance.isMounted) {
 					patch(null, subTree, container, anchor);
