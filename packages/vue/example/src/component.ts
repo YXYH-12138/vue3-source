@@ -162,13 +162,17 @@ const parentComponent = {
 					},
 					[{ default: () => "这是插槽内容" }]
 				),
-				createVnode(KeepAlive, null, {
-					default: () => {
-						return this.foo <= 1
-							? createVnode(childComponent2, { title: "keep-alive childComponent2" })
-							: createVnode(childComponent3, { title: "keep-alive childComponent3" });
+				createVnode(
+					KeepAlive,
+					{ max: 5 },
+					{
+						default: () => {
+							return this.foo <= 1
+								? createVnode(childComponent2, { key: 1, title: "keep-alive childComponent2" })
+								: createVnode(childComponent3, { key: 2, title: "keep-alive childComponent3" });
+						}
 					}
-				})
+				)
 			]);
 		}
 	}

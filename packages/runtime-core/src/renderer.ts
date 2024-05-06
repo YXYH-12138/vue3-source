@@ -246,7 +246,8 @@ export function createRenderer({
 				move(vnode: VNode, container: HTMLElement, anchor?: HTMLElement) {
 					insert(vnode.component.subTree.el, container, anchor);
 				},
-				createElement
+				createElement,
+				unmount
 			};
 		}
 
