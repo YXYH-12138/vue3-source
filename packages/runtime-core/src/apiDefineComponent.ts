@@ -13,6 +13,7 @@ interface DefineComponentProps {
 	name?: string;
 	props?: Record<string, any>;
 	setup: SetupFn;
+	[key: string]: any;
 }
 
 export function defineComponent(props: DefineComponentProps) {

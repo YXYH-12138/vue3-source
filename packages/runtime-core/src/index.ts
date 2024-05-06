@@ -4,3 +4,4 @@ export { getCurrentInstance } from "./component";
 export { defineComponent } from "./apiDefineComponent";
 export { type VNode, Text, Fragment, createVnode } from "./vnode";
 export { defineAsyncComponent } from "./apiAsyncComponent";
+export { KeepAlive } from "./components/KeepAlive";

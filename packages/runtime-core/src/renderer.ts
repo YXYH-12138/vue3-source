@@ -56,8 +56,12 @@ export function createRenderer({
 	function unmount(vnode: VNode) {
 		if (vnode.type === Fragment) {
 			(vnode.children as VNode[]).forEach((v) => unmount(v));
-		} else if (isObject(vnode.type)) {
-			unmount(vnode.component.subTree);
+		} else if (isObject(vnode.type) || isFunction(vnode.type)) {
+			if ((vnode.type as any).shouldKeepAlive) {
+				(vnode.type as any).keepAliveInstance._deactivate(vnode);
+			} else {
+				unmount(vnode.component.subTree);
+			}
 			excuteHooks(vnode.component.unMounted);
 		} else {
 			remove(vnode.el);
@@ -105,7 +109,11 @@ export function createRenderer({
 			}
 		} else if (isObject(n2.type) || isFunction(n2.type)) {
 			if (!n1) {
-				mountComponent(n2, container, anchor);
+				if (n2.keptAlive) {
+					n2.keepAliveInstance._activate(n2, container, anchor);
+				} else {
+					mountComponent(n2, container, anchor);
+				}
 			} else {
 				patchComponent(n1, n2, anchor);
 			}
@@ -231,6 +239,16 @@ export function createRenderer({
 			unMounted: []
 		};
 		vnode.component = instance;
+
+		// 处理keep-alive组件
+		if (componentOption._isKeepAlive) {
+			instance.keepAliveCtx = {
+				move(vnode: VNode, container: HTMLElement, anchor?: HTMLElement) {
+					insert(vnode.component.subTree.el, container, anchor);
+				},
+				createElement
+			};
+		}
 
 		// created hook
 
