@@ -4,6 +4,7 @@ import schedule from "./schedule";
 import { opts } from "./opts";
 import { setCurrentInstance } from "./component";
 import { type VNode, Text as TextType, Fragment, isSameVNodeType } from "./vnode";
+import { isTeleport } from "./components/Teleport";
 
 type Invoke = {
 	(...arg: any[]): void;
@@ -54,18 +55,18 @@ export function createRenderer({
 
 	// 卸载
 	function unmount(vnode: VNode) {
-		if (vnode.type === Fragment) {
-			(vnode.children as VNode[]).forEach((v) => unmount(v));
-		} else if (isObject(vnode.type) || isFunction(vnode.type)) {
-			const comp = vnode.type as any;
-			if (comp.shouldKeepAlive) {
-				comp.keepAliveInstance._deactivate(vnode);
-			} else if (comp._isTeleport) {
+		const comp = vnode.type as any;
+		if (isObject(comp) || isFunction(comp)) {
+			if (vnode.shouldKeepAlive) {
+				vnode.keepAliveInstance._deactivate(vnode);
+			} else if (isTeleport(comp)) {
 				(vnode.children as VNode[]).forEach((v) => unmount(v));
 			} else {
 				unmount(vnode.component.subTree);
 				excuteHooks(vnode.component.unMounted);
 			}
+		} else if (comp === Fragment) {
+			(vnode.children as VNode[]).forEach((v) => unmount(v));
 		} else {
 			remove(vnode.el);
 		}
@@ -110,15 +111,13 @@ export function createRenderer({
 					setText(el as Text, n2.children as string);
 				}
 			}
-		} else if (isObject(n2.type) && (n2.type as any)._isTeleport) {
+		} else if (isObject(n2.type) && isTeleport(n2.type)) {
 			// 处理Teleport组件
 			(n2.type as any).process(n1, n2, container, anchor, {
 				patch,
 				patchChildren,
 				unmount,
-				move(vnode: VNode, container: HTMLElement, anchor: HTMLElement) {
-					insert(vnode.component ? vnode.component.subTree.el : vnode.el, container, anchor);
-				}
+				insert
 			});
 		} else if (isObject(n2.type) || isFunction(n2.type)) {
 			// 普通和函数式组件
@@ -158,13 +157,9 @@ export function createRenderer({
 		} else if (isArray(newChildren)) {
 			// 最复杂的情况 都是多个子节点
 			if (isArray(oldChildren)) {
-				if (oldChildren.length === 1 && oldChildren.length === newChildren.length) {
-					patchElement(oldChildren[0], newChildren[0], el);
-				} else {
-					fastDiff(oldChildren, newChildren, el, parentAnchor);
-					// simpleDiff(oldChildren, newChildren, el);
-					// patchKeyedChildren(oldChildren, newChildren, el);
-				}
+				fastDiff(oldChildren, newChildren, el, parentAnchor);
+				// simpleDiff(oldChildren, newChildren, el);
+				// patchKeyedChildren(oldChildren, newChildren, el);
 			} else {
 				/**
 				 * 没有旧子节点或者旧子节点是文本子节点的情况
@@ -228,6 +223,16 @@ export function createRenderer({
 		insert(el, container, anchor);
 	}
 
+	const internals = { move, createElement, unmount, insert };
+	function move(vnode: VNode, container: HTMLElement, anchor?: HTMLElement) {
+		const comp = vnode.type as any;
+		if (isFunction(comp?.move)) {
+			comp.move(vnode, container, anchor, internals);
+		} else {
+			insert(vnode.component ? vnode.component.subTree.el : vnode.el, container, anchor);
+		}
+	}
+
 	/** 挂载组件 */
 	function mountComponent(vnode: VNode, container: RendererElement, anchor?: HTMLElement) {
 		let componentOption: any = vnode.type;
@@ -255,20 +260,10 @@ export function createRenderer({
 			attrs,
 			slots,
 			mounted: [],
-			unMounted: []
+			unMounted: [],
+			ctx: internals
 		};
 		vnode.component = instance;
-
-		// 处理keep-alive组件
-		if (componentOption._isKeepAlive) {
-			instance.keepAliveCtx = {
-				move(vnode: VNode, container: HTMLElement, anchor?: HTMLElement) {
-					insert(vnode.component.subTree.el, container, anchor);
-				},
-				createElement,
-				unmount
-			};
-		}
 
 		// created hook
 
@@ -639,7 +634,7 @@ export function createRenderer({
 					if (i !== increasingNewIndexSequence[j]) {
 						const pos = i + startIndex;
 						const nextPos = pos + 1;
-						const anchor = nextPos < newChildren.length ? newChildren[nextPos].el : null;
+						const anchor = nextPos < l2 ? newChildren[nextPos].el : null;
 						insert(newChildren[pos].el, container, anchor as HTMLElement);
 					} else {
 						// 节点不需要移动

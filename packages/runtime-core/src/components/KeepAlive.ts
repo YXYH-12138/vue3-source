@@ -1,6 +1,7 @@
 import { isArray, isObject, isRegExp, isString } from "@mini-vue/shared";
 import { defineComponent } from "../apiDefineComponent";
 import { getCurrentInstance } from "../component";
+import { isTeleport } from "./Teleport";
 import type { VNode } from "../vnode";
 
 type MatchPattern = string | RegExp | (string | RegExp)[];
@@ -15,8 +16,12 @@ type CacheKey = string | number | symbol | object;
 type Cache = Map<CacheKey, VNode>;
 type Keys = Set<CacheKey>;
 
+export const isKeepAlive = (vnode: VNode): boolean => (vnode.type as any).__isKeepAlive;
+
+// TODO:缓存Teleport组件有问题
 export const KeepAlive = defineComponent({
-	_isKeepAlive: true,
+	name: "KeepAlive",
+	__isKeepAlive: true,
 	props: {
 		include: [String, RegExp, Array],
 		exclude: [String, RegExp, Array],
@@ -28,12 +33,12 @@ export const KeepAlive = defineComponent({
 
 		const instance = getCurrentInstance();
 
-		const { move, createElement, unmount } = instance.keepAliveCtx;
+		const { move, createElement, unmount } = instance.ctx;
 
 		const storageContainer = createElement("div");
 
 		instance._deactivate = (vnode: VNode) => {
-			move(vnode, storageContainer, 0);
+			move(vnode, storageContainer);
 		};
 		instance._activate = (vnode: VNode, container: HTMLElement, anchor: HTMLElement) => {
 			move(vnode, container, anchor);
@@ -44,6 +49,25 @@ export const KeepAlive = defineComponent({
 			unmount(cached);
 			cacheMap.delete(key);
 			keys.delete(key);
+		};
+
+		const setProperty = (
+			rawVNode: VNode,
+			cachedVNode: VNode,
+			cb: (vnode: VNode, cachedVNode: VNode) => void
+		) => {
+			cb(rawVNode, cachedVNode);
+
+			if (
+				isTeleport(rawVNode.type) &&
+				isArray(rawVNode?.children) &&
+				isArray(cachedVNode?.children)
+			) {
+				const c2 = cachedVNode.children as VNode[];
+				rawVNode.children.forEach((vnode, i) => {
+					cb(vnode, c2[i]);
+				});
+			}
 		};
 
 		return () => {
@@ -66,10 +90,12 @@ export const KeepAlive = defineComponent({
 			const cachedVNode = cacheMap.get(key);
 
 			if (cachedVNode) {
-				// 避免组件重新挂载
-				rawVNode.keptAlive = true;
-				// 继承组件的实例
-				rawVNode.component = cachedVNode.component;
+				setProperty(rawVNode, cachedVNode, (vnode, cVNode) => {
+					// 避免组件重新挂载
+					vnode.keptAlive = true;
+					// 继承组件的实例
+					vnode.component = cVNode.component;
+				});
 			} else {
 				keys.add(key);
 				cacheMap.set(key, rawVNode);
@@ -78,10 +104,12 @@ export const KeepAlive = defineComponent({
 				}
 			}
 
-			// 保存keep-alive实例
-			rawVNode.keepAliveInstance = instance;
-			// 标记为true,避免组件被卸载
-			rawVNode.shouldKeepAlive = true;
+			setProperty(rawVNode, cachedVNode, (vnode) => {
+				// 保存keep-alive实例
+				vnode.keepAliveInstance = instance;
+				// 标记为true,避免组件被卸载
+				vnode.shouldKeepAlive = true;
+			});
 
 			return rawVNode;
 		};

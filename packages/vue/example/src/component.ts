@@ -6,7 +6,9 @@ import {
 	defineAsyncComponent,
 	onMounted,
 	onUnmounted,
-	KeepAlive
+	KeepAlive,
+	Teleport,
+	defineComponent
 } from "../../../runtime-core/src";
 
 const renderer = ensureRenderer();
@@ -34,7 +36,7 @@ const childComponent1 = {
 
 		return () => {
 			const vnodes = createVnode("div", { class: "hw" }, [
-				createVnode("span", null, counter.value),
+				// createVnode("span", null, counter.value),
 				createVnode(
 					"button",
 					{
@@ -55,8 +57,8 @@ const childComponent1 = {
 					},
 					"-1"
 				),
-				createVnode("span", undefined, props.title),
-				createVnode(null, null, slots[0]?.default())
+				createVnode("span", undefined, props.title)
+				// createVnode(null, null, slots[0]?.default())
 			]);
 			return vnodes;
 		};
@@ -135,12 +137,15 @@ const AsyncComp = defineAsyncComponent({
 	}
 });
 
-const parentComponent = {
-	type: {
-		data() {
-			return { title: "hellow vue", foo: 1 };
-		},
-		render(this: any) {
+const parentComponent = defineComponent({
+	setup() {
+		const state = reactive({ title: "hellow vue", foo: 1 });
+
+		const change = (val: any) => {
+			state.foo = val;
+		};
+
+		return () => {
 			return createVnode(Fragment, undefined, [
 				// createVnode(
 				// 	"button",
@@ -154,28 +159,41 @@ const parentComponent = {
 				createVnode(
 					childComponent1,
 					{
-						title: this.title,
+						title: "counter:" + state.foo,
 						foo: 111,
-						onChange: (val: any) => {
-							this.foo = val;
-						}
+						onChange: change
 					},
 					[{ default: () => "这是插槽内容" }]
 				),
+				// state.foo <= 1
+				// 	? createVnode(Teleport, { to: "body", key: "Teleport" }, [
+				// 			createVnode(
+				// 				childComponent2,
+				// 				{ key: 1, title: "keep-alive childComponent2" },
+				// 				"keep-alive childComponent2"
+				// 			)
+				// 	  ])
+				// 	: createVnode(
+				// 			childComponent3,
+				// 			{ key: 2, title: "keep-alive childComponent3" },
+				// 			"keep-alive childComponent3"
+				// 	  )
 				createVnode(
 					KeepAlive,
 					{ max: 5 },
 					{
 						default: () => {
-							return this.foo <= 1
-								? createVnode(childComponent2, { key: 1, title: "keep-alive childComponent2" })
-								: createVnode(childComponent3, { key: 2, title: "keep-alive childComponent3" });
+							return state.foo <= 1
+								? createVnode(Teleport, { to: "body" }, [
+										createVnode(childComponent2, { title: "keep-alive childComponent2" })
+								  ])
+								: createVnode(childComponent3, { title: "keep-alive childComponent3" });
 						}
 					}
 				)
 			]);
-		}
+		};
 	}
-};
+});
 
-renderer.render(parentComponent, document.querySelector("#app")!);
+renderer.render(createVnode(parentComponent), document.querySelector("#app")!);
