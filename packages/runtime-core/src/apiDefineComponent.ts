@@ -9,7 +9,7 @@ type SetupContext = {
 
 type SetupFn = (props: Props, context: SetupContext) => Record<string, any> | (() => VNode);
 
-interface DefineComponentProps {
+export interface DefineComponentProps {
 	name?: string;
 	props?: Record<string, any>;
 	setup: SetupFn;

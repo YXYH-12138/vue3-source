@@ -1,35 +1,37 @@
 import { effect, reactive, shallowReactive, shallowReadonly } from "@mini-vue/reactivity";
 import { hasOwn, isArray, isFunction, isObject, isOn, isString } from "@mini-vue/shared";
 import schedule from "./schedule";
-import { opts } from "./opts";
 import { setCurrentInstance } from "./component";
 import { type VNode, Text as TextType, Fragment, isSameVNodeType } from "./vnode";
 import { isTeleport } from "./components/Teleport";
+import { type CreateAppFunction, createAppAPI } from "./apiCreateApp";
 
-type Invoke = {
-	(...arg: any[]): void;
-	attached?: number;
-	value?: (e: any) => void;
-};
-
-export interface RendererElement extends HTMLElement {
-	_vnode?: VNode;
-	_invoke?: Record<string, Invoke>;
+export interface Renderer<HostElement = RendererElement> {
+	render: RootRenderFunction<HostElement>;
+	createApp: CreateAppFunction<HostElement>;
 }
 
-export type HostElement = RendererElement | Text;
+export interface RendererNode {
+	[key: string]: any;
+}
+export interface RendererElement extends RendererNode {}
 
-export interface RendererOptions {
-	createElement: (tag: string) => RendererElement;
-	patchProp: (el: RendererElement, key: string, prevValue: any, nextValue: any) => void;
-	insert: (el: RendererElement | Text, parent: RendererElement, anchor?: HTMLElement) => void;
+export interface RendererOptions<HostElement = RendererElement> {
+	createElement: (tag: string) => HostElement;
+	patchProp: (el: HostElement, key: string, prevValue: any, nextValue: any) => void;
+	insert: (el: HostElement | Text, parent: HostElement, anchor?: HostElement) => void;
 	remove: (el: HostElement) => void;
 	createText: (text?: string) => Text;
 	setText: (el: Text, text: string) => void;
-	setElementText: (el: HTMLElement, text: string) => void;
+	setElementText: (el: HostElement, text: string) => void;
 }
 
-export function createRenderer({
+export type RootRenderFunction<HostElement = RendererElement> = (
+	vnode: VNode | null,
+	container: HostElement
+) => void;
+
+function baseCreateRenderer<HostElement = RendererElement>({
 	setElementText,
 	createElement,
 	createText,
@@ -37,17 +39,17 @@ export function createRenderer({
 	remove,
 	insert,
 	patchProp
-}: RendererOptions) {
-	function render(vNode: VNode, container: RendererElement) {
+}: RendererOptions<HostElement>): Renderer<HostElement> {
+	const render: RootRenderFunction = (vNode, container) => {
 		if (vNode) {
 			// 如果有新的vnode，则patch
-			patch(container._vnode, vNode, container);
+			patch(container._vnode, vNode, container as HostElement);
 		} else if (container._vnode) {
 			// 如果没有新的vnode而且有旧的vnode，则删除
 			unmount(container._vnode);
 		}
 		container._vnode = vNode;
-	}
+	};
 
 	const excuteHooks = (hooks?: Array<(this: any) => void>, context?: any) => {
 		hooks && hooks.forEach((fn) => fn.call(context));
@@ -68,17 +70,12 @@ export function createRenderer({
 		} else if (comp === Fragment) {
 			(vnode.children as VNode[]).forEach((v) => unmount(v));
 		} else {
-			remove(vnode.el);
+			remove(vnode.el as HostElement);
 		}
 	}
 
 	/** 对新节点和旧节点进行比较patch */
-	function patch(
-		n1: VNode | undefined,
-		n2: VNode,
-		container: RendererElement,
-		anchor?: HTMLElement
-	) {
+	function patch(n1: VNode | undefined, n2: VNode, container: HostElement, anchor?: HostElement) {
 		//  如果新旧node类型不同，直接卸载即可
 		if (n1 && n1.type !== n2.type) {
 			unmount(n1);
@@ -98,13 +95,13 @@ export function createRenderer({
 			if (!n1 && isArray(n2.children)) {
 				n2.children.forEach((v) => patch(undefined, v, container, anchor));
 			} else {
-				patchChildren(n1, n2, container);
+				patchChildren(n1, n2, container as HostElement);
 			}
 			// 处理文本节点
 		} else if (n2.type === TextType) {
 			if (!n1) {
 				const el = (n2.el = createText(n2.children as string));
-				insert(el, container, anchor);
+				insert(el, container as HostElement, anchor as HostElement);
 			} else {
 				const el = (n2.el = n1.el);
 				if (n1.children !== n2.children) {
@@ -137,8 +134,8 @@ export function createRenderer({
 	function patchChildren(
 		n1: VNode | undefined,
 		n2: VNode,
-		el: RendererElement,
-		parentAnchor?: HTMLElement
+		el: HostElement,
+		parentAnchor?: HostElement
 	) {
 		const oldChildren = n1.children;
 		const newChildren = n2.children;
@@ -181,28 +178,28 @@ export function createRenderer({
 	}
 
 	/** 更新元素 */
-	function patchElement(n1: VNode | undefined, n2: VNode, container: RendererElement) {
+	function patchElement(n1: VNode | undefined, n2: VNode, container: HostElement) {
 		const el = (n2.el = n1.el);
 		const oldProps = n1.props;
 		const newProps = n2.props;
 		// 添加新的props
 		for (const key in newProps) {
 			if (oldProps[key] !== newProps[key]) {
-				patchProp(el as RendererElement, key, oldProps[key], newProps[key]);
+				patchProp(el as HostElement, key, oldProps[key], newProps[key]);
 			}
 		}
 		// 删除旧的props
 		for (const key in oldProps) {
 			if (!hasOwn(newProps, key)) {
-				patchProp(el as RendererElement, key, oldProps[key], null);
+				patchProp(el as HostElement, key, oldProps[key], null);
 			}
 		}
 
-		patchChildren(n1, n2, el as RendererElement);
+		patchChildren(n1, n2, el as HostElement);
 	}
 
 	/** 挂载元素 */
-	function mountElement(vnode: VNode, container: RendererElement, anchor?: HTMLElement) {
+	function mountElement(vnode: VNode, container: HostElement, anchor?: HostElement) {
 		const { type, props, children } = vnode;
 		const el = (vnode.el = createElement(type as string));
 		if (isString(children)) {
@@ -224,7 +221,7 @@ export function createRenderer({
 	}
 
 	const internals = { move, createElement, unmount, insert };
-	function move(vnode: VNode, container: HTMLElement, anchor?: HTMLElement) {
+	function move(vnode: VNode, container: HostElement, anchor?: HostElement) {
 		const comp = vnode.type as any;
 		if (isFunction(comp?.move)) {
 			comp.move(vnode, container, anchor, internals);
@@ -234,7 +231,7 @@ export function createRenderer({
 	}
 
 	/** 挂载组件 */
-	function mountComponent(vnode: VNode, container: RendererElement, anchor?: HTMLElement) {
+	function mountComponent(vnode: VNode, container: HostElement, anchor?: HostElement) {
 		let componentOption: any = vnode.type;
 
 		// 如果是函数式组件
@@ -338,7 +335,7 @@ export function createRenderer({
 	}
 
 	/** 更新组件 */
-	function patchComponent(n1: VNode, n2: VNode, anchor: HTMLElement) {
+	function patchComponent(n1: VNode, n2: VNode, anchor: HostElement) {
 		const instance = (n2.component = n1.component);
 		const { props } = instance;
 		// 判断为子组件传递的props是否改变
@@ -363,138 +360,138 @@ export function createRenderer({
 	 *  如果找到的旧节点的索引小于lastIndex，则说明需要移动
 	 *  否则更新lastIndex为当前遍历到底旧节点索引
 	 */
-	function simpleDiff(oldChildren: VNode[], newChildren: VNode[], container: RendererElement) {
-		const oldLen = oldChildren.length;
-		const newLen = newChildren.length;
+	// function simpleDiff(oldChildren: VNode[], newChildren: VNode[], container: RendererElement) {
+	// 	const oldLen = oldChildren.length;
+	// 	const newLen = newChildren.length;
 
-		// 记录最大的索引值
-		let lastIndex = 0;
+	// 	// 记录最大的索引值
+	// 	let lastIndex = 0;
 
-		for (let i = 0; i < newLen; i++) {
-			// 记录是否找到了旧节点
-			let find = false;
-			const newNode = newChildren[i];
-			for (let j = 0; j < oldLen; j++) {
-				const oldNode = oldChildren[j];
-				if (oldNode.key === newNode.key) {
-					find = true;
-					patch(oldNode, newNode, container);
-					// 如果找到的旧节点的索引小于最大的索引，则说明需要移动
-					if (j < lastIndex) {
-						// 获取新节点的上一个节点
-						const prevNode = newChildren[i - 1];
-						if (prevNode) {
-							// 以上一个节点的下一个兄弟节点作为锚点
-							const anchor = prevNode.el!.nextSibling as HTMLElement;
-							insert(oldNode.el!, container, anchor);
-						}
-					} else {
-						lastIndex = j;
-					}
-					break;
-				}
-			}
-			// 判断是否添加新节点
-			if (!find) {
-				// 获取新节点的上一个节点
-				const prevNode = newChildren[i - 1];
-				// 如果有prevNode以上一个节点的下一个兄弟节点作为锚点，
-				// 没有代表需要将元素插入到开始，需要使用container.firstChild作为锚点，不然会将节点插入到已有节点的后面
-				const anchor = prevNode ? prevNode.el.nextSibling : container.firstChild;
-				patch(null, newNode, container, anchor as HTMLElement);
-			}
-			// 删除旧节点
-			for (let j = 0; j < oldLen; j++) {
-				const oldVNode = oldChildren[j];
-				const has = newChildren.find((v) => v.key === oldVNode.key);
-				// 如果没有则代表需要删除
-				if (!has) {
-					unmount(oldVNode);
-				}
-			}
-		}
-	}
+	// 	for (let i = 0; i < newLen; i++) {
+	// 		// 记录是否找到了旧节点
+	// 		let find = false;
+	// 		const newNode = newChildren[i];
+	// 		for (let j = 0; j < oldLen; j++) {
+	// 			const oldNode = oldChildren[j];
+	// 			if (oldNode.key === newNode.key) {
+	// 				find = true;
+	// 				patch(oldNode, newNode, container);
+	// 				// 如果找到的旧节点的索引小于最大的索引，则说明需要移动
+	// 				if (j < lastIndex) {
+	// 					// 获取新节点的上一个节点
+	// 					const prevNode = newChildren[i - 1];
+	// 					if (prevNode) {
+	// 						// 以上一个节点的下一个兄弟节点作为锚点
+	// 						const anchor = prevNode.el!.nextSibling as HTMLElement;
+	// 						insert(oldNode.el!, container, anchor);
+	// 					}
+	// 				} else {
+	// 					lastIndex = j;
+	// 				}
+	// 				break;
+	// 			}
+	// 		}
+	// 		// 判断是否添加新节点
+	// 		if (!find) {
+	// 			// 获取新节点的上一个节点
+	// 			const prevNode = newChildren[i - 1];
+	// 			// 如果有prevNode以上一个节点的下一个兄弟节点作为锚点，
+	// 			// 没有代表需要将元素插入到开始，需要使用container.firstChild作为锚点，不然会将节点插入到已有节点的后面
+	// 			const anchor = prevNode ? prevNode.el.nextSibling : container.firstChild;
+	// 			patch(null, newNode, container, anchor as HTMLElement);
+	// 		}
+	// 		// 删除旧节点
+	// 		for (let j = 0; j < oldLen; j++) {
+	// 			const oldVNode = oldChildren[j];
+	// 			const has = newChildren.find((v) => v.key === oldVNode.key);
+	// 			// 如果没有则代表需要删除
+	// 			if (!has) {
+	// 				unmount(oldVNode);
+	// 			}
+	// 		}
+	// 	}
+	// }
 
 	/**
 	 * 双端diff算法
 	 *  对比简单diff,执行的DOM移动操作次数更少
 	 */
-	function patchKeyedChildren(
-		oldChildren: VNode[],
-		newChildren: VNode[],
-		container: RendererElement
-	) {
-		// 新旧节点开始结束的索引
-		let newStartIndex = 0;
-		let newEndIndex = newChildren.length - 1;
-		let oldStartIndex = 0;
-		let oldEndIndex = oldChildren.length - 1;
+	// function patchKeyedChildren(
+	// 	oldChildren: VNode[],
+	// 	newChildren: VNode[],
+	// 	container: RendererElement
+	// ) {
+	// 	// 新旧节点开始结束的索引
+	// 	let newStartIndex = 0;
+	// 	let newEndIndex = newChildren.length - 1;
+	// 	let oldStartIndex = 0;
+	// 	let oldEndIndex = oldChildren.length - 1;
 
-		let newStartVNode = newChildren[newStartIndex];
-		let newEndVNode = newChildren[newEndIndex];
-		let oldStartVNode = oldChildren[oldStartIndex];
-		let oldEndVNode = oldChildren[oldEndIndex];
+	// 	let newStartVNode = newChildren[newStartIndex];
+	// 	let newEndVNode = newChildren[newEndIndex];
+	// 	let oldStartVNode = oldChildren[oldStartIndex];
+	// 	let oldEndVNode = oldChildren[oldEndIndex];
 
-		// 循环进行双端比较
-		while (newStartIndex <= newEndIndex && oldStartIndex <= oldEndIndex) {
-			// 如果没有新旧节点，则代表被处理过
-			if (!oldStartVNode) {
-				oldStartVNode = oldChildren[++oldStartIndex];
-			} else if (!oldEndVNode) {
-				oldEndVNode = oldChildren[--oldEndIndex];
-			} else if (oldStartVNode.key === newStartVNode.key) {
-				/** 旧头节点与新头节点key相同 */
-				patch(oldStartVNode, newStartVNode, container);
-				oldStartVNode = oldChildren[++oldStartIndex];
-				newStartVNode = newChildren[++newStartIndex];
-			} else if (oldEndVNode.key === newEndVNode.key) {
-				/** 旧尾节点与新尾节点key相同 */
-				patch(oldEndVNode, newEndVNode, container);
-				oldEndVNode = oldChildren[--oldEndIndex];
-				newEndVNode = newChildren[--newEndIndex];
-			} else if (oldStartVNode.key === newEndVNode.key) {
-				/** 旧头节点与新尾节点key相同 */
-				patch(oldStartVNode, newEndVNode, container);
-				// 将oldStartVNode移动到oldEndVNode的后面
-				insert(oldStartVNode.el!, container, oldEndVNode.el.nextSibling as HTMLElement);
-				oldStartVNode = oldChildren[++oldStartIndex];
-				newEndVNode = newChildren[--newEndIndex];
-			} else if (oldEndVNode.key === newStartVNode.key) {
-				/** 旧尾节点与新头节点key相同 */
-				patch(oldEndVNode, newStartVNode, container);
-				// 将oldEndVNode移动到oldStartVNode的前面
-				insert(oldEndVNode.el!, container, oldStartVNode.el as HTMLElement);
-				oldEndVNode = oldChildren[--oldEndIndex];
-				newStartVNode = newChildren[++newStartIndex];
-			} else {
-				/** 非理想情况，头尾都没找到 */
+	// 	// 循环进行双端比较
+	// 	while (newStartIndex <= newEndIndex && oldStartIndex <= oldEndIndex) {
+	// 		// 如果没有新旧节点，则代表被处理过
+	// 		if (!oldStartVNode) {
+	// 			oldStartVNode = oldChildren[++oldStartIndex];
+	// 		} else if (!oldEndVNode) {
+	// 			oldEndVNode = oldChildren[--oldEndIndex];
+	// 		} else if (oldStartVNode.key === newStartVNode.key) {
+	// 			/** 旧头节点与新头节点key相同 */
+	// 			patch(oldStartVNode, newStartVNode, container);
+	// 			oldStartVNode = oldChildren[++oldStartIndex];
+	// 			newStartVNode = newChildren[++newStartIndex];
+	// 		} else if (oldEndVNode.key === newEndVNode.key) {
+	// 			/** 旧尾节点与新尾节点key相同 */
+	// 			patch(oldEndVNode, newEndVNode, container);
+	// 			oldEndVNode = oldChildren[--oldEndIndex];
+	// 			newEndVNode = newChildren[--newEndIndex];
+	// 		} else if (oldStartVNode.key === newEndVNode.key) {
+	// 			/** 旧头节点与新尾节点key相同 */
+	// 			patch(oldStartVNode, newEndVNode, container);
+	// 			// 将oldStartVNode移动到oldEndVNode的后面
+	// 			insert(oldStartVNode.el!, container, oldEndVNode.el.nextSibling as HTMLElement);
+	// 			oldStartVNode = oldChildren[++oldStartIndex];
+	// 			newEndVNode = newChildren[--newEndIndex];
+	// 		} else if (oldEndVNode.key === newStartVNode.key) {
+	// 			/** 旧尾节点与新头节点key相同 */
+	// 			patch(oldEndVNode, newStartVNode, container);
+	// 			// 将oldEndVNode移动到oldStartVNode的前面
+	// 			insert(oldEndVNode.el!, container, oldStartVNode.el as HTMLElement);
+	// 			oldEndVNode = oldChildren[--oldEndIndex];
+	// 			newStartVNode = newChildren[++newStartIndex];
+	// 		} else {
+	// 			/** 非理想情况，头尾都没找到 */
 
-				// 查找新头节点在旧节点中的索引
-				const indexInOld = oldChildren.findIndex((vnode) => vnode.key === newStartVNode.key);
-				if (indexInOld !== -1) {
-					const vnodeToMove = oldChildren[indexInOld];
-					patch(vnodeToMove, newStartVNode, container);
-					insert(vnodeToMove.el!, container, oldStartVNode.el as HTMLElement);
-					oldChildren[indexInOld] = undefined;
-				} else {
-					patch(null, newStartVNode, container, oldStartVNode.el as HTMLElement);
-				}
-				newStartVNode = newChildren[++newStartIndex];
-			}
-		}
+	// 			// 查找新头节点在旧节点中的索引
+	// 			const indexInOld = oldChildren.findIndex((vnode) => vnode.key === newStartVNode.key);
+	// 			if (indexInOld !== -1) {
+	// 				const vnodeToMove = oldChildren[indexInOld];
+	// 				patch(vnodeToMove, newStartVNode, container);
+	// 				insert(vnodeToMove.el!, container, oldStartVNode.el as HTMLElement);
+	// 				oldChildren[indexInOld] = undefined;
+	// 			} else {
+	// 				patch(null, newStartVNode, container, oldStartVNode.el as HTMLElement);
+	// 			}
+	// 			newStartVNode = newChildren[++newStartIndex];
+	// 		}
+	// 	}
 
-		// 新子元素中未处理的节点需要逐一挂载
-		if (newStartIndex <= newEndIndex && oldEndIndex < newStartIndex) {
-			for (let i = newStartIndex; i <= newEndIndex; i++) {
-				patch(null, newChildren[i], container, oldStartVNode.el as HTMLElement);
-			}
-			/** 处理删除节点的情况 */
-		} else if (oldStartIndex <= oldEndIndex && newEndIndex < newStartIndex) {
-			for (let i = oldStartIndex; i <= oldEndIndex; i++) {
-				unmount(oldChildren[i]);
-			}
-		}
-	}
+	// 	// 新子元素中未处理的节点需要逐一挂载
+	// 	if (newStartIndex <= newEndIndex && oldEndIndex < newStartIndex) {
+	// 		for (let i = newStartIndex; i <= newEndIndex; i++) {
+	// 			patch(null, newChildren[i], container, oldStartVNode.el as HTMLElement);
+	// 		}
+	// 		/** 处理删除节点的情况 */
+	// 	} else if (oldStartIndex <= oldEndIndex && newEndIndex < newStartIndex) {
+	// 		for (let i = oldStartIndex; i <= oldEndIndex; i++) {
+	// 			unmount(oldChildren[i]);
+	// 		}
+	// 	}
+	// }
 
 	/**
 	 * 快速 Diff 算法在实测中性能最优。它借鉴了文本 Diff 中的预处理思路，
@@ -506,8 +503,8 @@ export function createRenderer({
 	function fastDiff(
 		oldChildren: VNode[],
 		newChildren: VNode[],
-		container: RendererElement,
-		parentAnchor?: HTMLElement
+		container: HostElement,
+		parentAnchor?: HostElement
 	) {
 		// 处理相同的前置节点
 		let startIndex = 0;
@@ -557,7 +554,7 @@ export function createRenderer({
 				const nextPos = newEndIndex + 1;
 				const anchor = nextPos < l2 ? newChildren[nextPos].el : parentAnchor;
 				while (startIndex <= newEndIndex) {
-					patch(null, newChildren[startIndex++], container, anchor as HTMLElement);
+					patch(null, newChildren[startIndex++], container, anchor as HostElement);
 				}
 			}
 		}
@@ -629,13 +626,13 @@ export function createRenderer({
 					const nextChild = newChildren[nextIndex];
 					// 用最后节点作为锚点
 					const anchor = nextIndex + 1 < l2 ? newChildren[nextIndex + 1].el : parentAnchor;
-					patch(null, nextChild, container, anchor as HTMLElement);
+					patch(null, nextChild, container, anchor as HostElement);
 				} else if (moved) {
 					if (i !== increasingNewIndexSequence[j]) {
 						const pos = i + startIndex;
 						const nextPos = pos + 1;
 						const anchor = nextPos < l2 ? newChildren[nextPos].el : null;
-						insert(newChildren[pos].el, container, anchor as HTMLElement);
+						insert(newChildren[pos].el as HostElement, container, anchor as HostElement);
 					} else {
 						// 节点不需要移动
 						j--;
@@ -645,7 +642,7 @@ export function createRenderer({
 		}
 	}
 
-	return { render };
+	return { render, createApp: createAppAPI(render) };
 }
 
 /** props是否有变化 */
@@ -731,6 +728,8 @@ function getSequence(arr: number[]) {
 	return result;
 }
 
-export function ensureRenderer() {
-	return createRenderer(opts);
+export function createRenderer<HostElement = RendererElement>(
+	options: RendererOptions<HostElement>
+) {
+	return baseCreateRenderer<HostElement>(options);
 }

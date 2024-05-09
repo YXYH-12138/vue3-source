@@ -1,11 +1,10 @@
 import { reactive, effect } from "../../../reactivity/src";
-import { createVnode, ensureRenderer, Fragment } from "../../../runtime-core/src";
+import { Fragment } from "../../../runtime-core/src";
+import { render } from "../../../runtime-dom/src";
 
 const foo = reactive({ id: "foo", flag: true });
 
 // const list = reactive([1]);
-
-const renderer = ensureRenderer();
 
 effect(() => {
 	const vnode = {
@@ -258,7 +257,7 @@ effect(() => {
 	};
 	//#endregion
 
-	renderer.render(foo.flag ? oldNode1 : newNode2, document.querySelector("#app")!);
+	render(foo.flag ? oldNode1 : newNode2, document.querySelector("#app")!);
 });
 
 setTimeout(() => {

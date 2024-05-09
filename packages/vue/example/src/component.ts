@@ -1,7 +1,6 @@
 import { reactive, ref } from "@mini-vue/reactivity";
 import {
-	ensureRenderer,
-	createVnode,
+	createVNode,
 	Fragment,
 	defineAsyncComponent,
 	onMounted,
@@ -9,12 +8,11 @@ import {
 	KeepAlive,
 	Teleport,
 	defineComponent
-} from "../../../runtime-core/src";
-
-const renderer = ensureRenderer();
+} from "@mini-vue/runtime-core";
+import { createApp } from "@mini-vue/runtime-dom";
 
 function functionalComp(props: any) {
-	return createVnode("div", null, props.title);
+	return createVNode("div", null, props.title);
 }
 (functionalComp as any).props = {
 	title: String
@@ -35,9 +33,9 @@ const childComponent1 = {
 		});
 
 		return () => {
-			const vnodes = createVnode("div", { class: "hw" }, [
-				// createVnode("span", null, counter.value),
-				createVnode(
+			const vnodes = createVNode("div", { class: "hw" }, [
+				// createVNode("span", null, counter.value),
+				createVNode(
 					"button",
 					{
 						onClick: () => {
@@ -47,7 +45,7 @@ const childComponent1 = {
 					},
 					"+1"
 				),
-				createVnode(
+				createVNode(
 					"button",
 					{
 						onClick: () => {
@@ -57,8 +55,8 @@ const childComponent1 = {
 					},
 					"-1"
 				),
-				createVnode("span", undefined, props.title)
-				// createVnode(null, null, slots[0]?.default())
+				createVNode("span", undefined, props.title)
+				// createVNode(null, null, slots[0]?.default())
 			]);
 			return vnodes;
 		};
@@ -71,7 +69,7 @@ const childComponent2 = {
 		const counter = ref(1);
 
 		return () => {
-			return createVnode(
+			return createVNode(
 				"div",
 				{
 					class: "hw2",
@@ -80,8 +78,8 @@ const childComponent2 = {
 					}
 				},
 				[
-					// createVnode("span", null, "childComponent2"),
-					createVnode("span", null, props.title + counter.value)
+					// createVNode("span", null, "childComponent2"),
+					createVNode("span", null, props.title + counter.value)
 				]
 			);
 		};
@@ -91,9 +89,9 @@ const childComponent3 = {
 	props: { title: String },
 	setup(props: any) {
 		return () => {
-			return createVnode("div", { class: "hw3" }, [
-				// createVnode("span", null, "childComponent3"),
-				createVnode("span", null, props.title)
+			return createVNode("div", { class: "hw3" }, [
+				// createVNode("span", null, "childComponent3"),
+				createVNode("span", null, props.title)
 			]);
 		};
 	}
@@ -127,12 +125,12 @@ const AsyncComp = defineAsyncComponent({
 		props: { error: Error },
 		setup(props: any) {
 			console.warn(props.error);
-			return () => createVnode(null, null, "这是我的error");
+			return () => createVNode(null, null, "这是我的error");
 		}
 	},
 	loadingComponent: {
 		setup() {
-			return () => createVnode(null, null, "这是我的loading");
+			return () => createVNode(null, null, "这是我的loading");
 		}
 	}
 });
@@ -146,8 +144,8 @@ const parentComponent = defineComponent({
 		};
 
 		return () => {
-			return createVnode(Fragment, undefined, [
-				// createVnode(
+			return createVNode(Fragment, undefined, [
+				// createVNode(
 				// 	"button",
 				// 	{
 				// 		onClick: () => {
@@ -156,7 +154,7 @@ const parentComponent = defineComponent({
 				// 	},
 				// 	"change title" + this.foo
 				// ),
-				createVnode(
+				createVNode(
 					childComponent1,
 					{
 						title: "counter:" + state.foo,
@@ -166,28 +164,28 @@ const parentComponent = defineComponent({
 					[{ default: () => "这是插槽内容" }]
 				),
 				// state.foo <= 1
-				// 	? createVnode(Teleport, { to: "body", key: "Teleport" }, [
-				// 			createVnode(
+				// 	? createVNode(Teleport, { to: "body", key: "Teleport" }, [
+				// 			createVNode(
 				// 				childComponent2,
 				// 				{ key: 1, title: "keep-alive childComponent2" },
 				// 				"keep-alive childComponent2"
 				// 			)
 				// 	  ])
-				// 	: createVnode(
+				// 	: createVNode(
 				// 			childComponent3,
 				// 			{ key: 2, title: "keep-alive childComponent3" },
 				// 			"keep-alive childComponent3"
 				// 	  )
-				createVnode(
+				createVNode(
 					KeepAlive,
 					{ max: 5 },
 					{
 						default: () => {
 							return state.foo <= 1
-								? createVnode(Teleport, { to: "body" }, [
-										createVnode(childComponent2, { title: "keep-alive childComponent2" })
+								? createVNode(Teleport, { to: "body" }, [
+										createVNode(childComponent2, { title: "keep-alive childComponent2" })
 								  ])
-								: createVnode(childComponent3, { title: "keep-alive childComponent3" });
+								: createVNode(childComponent3, { title: "keep-alive childComponent3" });
 						}
 					}
 				)
@@ -196,4 +194,4 @@ const parentComponent = defineComponent({
 	}
 });
 
-renderer.render(createVnode(parentComponent), document.querySelector("#app")!);
+createApp(parentComponent).mount("#app");

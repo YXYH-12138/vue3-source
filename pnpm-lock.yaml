@@ -64,6 +64,14 @@ importers:
       '@mini-vue/reactivity': link:../reactivity
       '@mini-vue/shared': link:../shared
 
+  packages/runtime-dom:
+    specifiers:
+      '@mini-vue/runtime-core': workspace:*
+      '@mini-vue/shared': workspace:*
+    dependencies:
+      '@mini-vue/runtime-core': link:../runtime-core
+      '@mini-vue/shared': link:../shared
+
   packages/shared:
     specifiers: {}
 
@@ -71,10 +79,12 @@ importers:
     specifiers:
       '@mini-vue/reactivity': workspace:*
       '@mini-vue/runtime-core': workspace:*
+      '@mini-vue/runtime-dom': workspace:*
       '@mini-vue/shared': workspace:*
     dependencies:
       '@mini-vue/reactivity': link:../reactivity
       '@mini-vue/runtime-core': link:../runtime-core
+      '@mini-vue/runtime-dom': link:../runtime-dom
       '@mini-vue/shared': link:../shared
 
 packages:

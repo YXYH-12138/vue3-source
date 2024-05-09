@@ -1,5 +1,5 @@
 import { isObject } from "@mini-vue/shared";
-import type { HostElement } from "./renderer";
+import type { RendererElement } from "./renderer";
 
 export const Fragment = Symbol();
 export const Text = Symbol();
@@ -9,12 +9,12 @@ export interface VNode {
 	props?: any | null;
 	key?: string | number | null;
 	children?: VNode[] | string | null | number | object;
-	el?: HostElement;
+	el?: RendererElement;
 	component?: any;
 	[key: string]: any;
 }
 
-export function createVnode(
+export function createVNode(
 	type: string | Symbol | object,
 	props?: any | null,
 	children?: VNode[] | string | null | number | object

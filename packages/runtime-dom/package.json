@@ -1,0 +1,25 @@
+{
+	"name": "@mini-vue/runtime-dom",
+	"version": "1.0.0",
+	"description": "@mini-vue/runtime-dom",
+	"main": "dist/runtime-dom.cjs.js",
+	"module": "dist/runtime-dom.esm-bundler.js",
+	"types": "dist/runtime-dom.d.ts",
+	"scripts": {
+		"test": "vitest"
+	},
+	"keywords": [],
+	"author": "coderred",
+	"license": "ISC",
+	"buildOptions": {
+		"name": "VueRuntimeDOM",
+		"formats": [
+			"esm-bundler",
+			"global"
+		]
+	},
+	"dependencies": {
+		"@mini-vue/runtime-core": "workspace:*",
+		"@mini-vue/shared": "workspace:*"
+	}
+}

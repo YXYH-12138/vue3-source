@@ -1,6 +1,6 @@
 import { ref, shallowRef } from "@mini-vue/reactivity";
 import { isFunction } from "@mini-vue/shared";
-import { createVnode } from "./vnode";
+import { createVNode } from "./vnode";
 import { onUnmounted } from "./apiLifecycle";
 import { defineComponent } from "./apiDefineComponent";
 
@@ -92,13 +92,13 @@ export function defineAsyncComponent<T extends Component = any>(
 
 			return () => {
 				if (error.value && errorComponent) {
-					return createVnode(errorComponent, { error: error.value });
+					return createVNode(errorComponent, { error: error.value });
 				} else if (loaded.value) {
-					return createVnode(InnerComp, { ...attrs, ...props }, slots);
+					return createVNode(InnerComp, { ...attrs, ...props }, slots);
 				} else if (loading.value && loadingComponent) {
-					return createVnode(loadingComponent);
+					return createVNode(loadingComponent);
 				} else {
-					return createVnode(undefined, undefined, "");
+					return createVNode(undefined, undefined, "");
 				}
 			};
 		}
