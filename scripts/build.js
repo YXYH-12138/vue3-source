@@ -12,9 +12,14 @@ const args = minimist(process.argv.slice(2));
 
 const targets = args._;
 
+// 打包目标格式
 const formats = args.formats || args.f;
+// 打包环境
 const devOnly = args.devOnly || args.d;
+// 生成sourceMap
 const sourceMap = (args.sourcemap || args.s) ?? true;
+// 打包.d.ts文件
+const buildTypes = args.withTypes || args.t;
 
 /** @type {boolean | undefined} */
 const buildAllMatching = args.all || args.a;
@@ -26,11 +31,34 @@ const allTargets = fs.readdirSync("packages").filter((f) => {
 	return true;
 });
 
-buildAll(targets.length ? fuzzyMatchTarget(targets, buildAllMatching) : allTargets);
+run();
 
-function buildAll(targets) {
+async function run() {
+	const resolvedTargets = targets.length ? fuzzyMatchTarget(targets, buildAllMatching) : allTargets;
+	try {
+		await buildAll(resolvedTargets);
+
+		if (buildTypes) {
+			await execa(
+				"pnpm",
+				[
+					"run",
+					"build-dts",
+					...(targets.length ? ["--environment", `TARGETS:${resolvedTargets.join(",")}`] : [])
+				],
+				{
+					stdio: "inherit"
+				}
+			);
+		}
+	} catch {
+		process.exit(0);
+	}
+}
+
+async function buildAll(targets) {
 	console.log(`打包目标：${targets.join(", ")}`);
-	runParallel(cpus.length, targets, build);
+	await runParallel(cpus.length, targets, build);
 }
 
 /**

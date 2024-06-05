@@ -6,7 +6,7 @@
 	"scripts": {
 		"dev": "node scripts/dev.js reactivity -f global",
 		"build": "node scripts/build.js",
-		"build-dts": "tsc -p tsconfig.build.json",
+		"build-dts": "rollup -c rollup.dts.config.js",
 		"test": "vitest"
 	},
 	"keywords": [],
@@ -29,6 +29,7 @@
 		"prettier": "^2.7.1",
 		"rollup": "^3.19.1",
 		"rollup-plugin-dts": "^6.1.0",
+		"rollup-plugin-esbuild": "^6.1.1",
 		"rollup-plugin-typescript2": "^0.34.1",
 		"sucrase": "^3.29.0",
 		"ts-node": "^10.9.2",
