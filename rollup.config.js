@@ -3,7 +3,6 @@ import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
 import path from "node:path";
 import esbuild from "rollup-plugin-esbuild";
-// import typescript from "rollup-plugin-typescript2";
 import { nodeResolve } from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
 
@@ -82,10 +81,6 @@ function createConfig(format, output) {
 				target: "es2016"
 				// define: resolveDefine()
 			})
-			// typescript({
-			// 	check: false,
-			// 	tsconfig: path.resolve(__dirname, "tsconfig.build.json")
-			// })
 		],
 		external,
 		output
