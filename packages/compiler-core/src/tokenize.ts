@@ -13,6 +13,12 @@ const enum State {
 	tagEndName // 标签结束名称
 }
 
+export const enum TokenTypes {
+	Tag = "tag",
+	Text = "text",
+	TagEnd = "tagEnd"
+}
+
 const isAlpha = (char: string) => /[a-zA-Z]/.test(char);
 
 export function tokenize(str: string) {
@@ -50,7 +56,7 @@ export function tokenize(str: string) {
 					charts.push(char);
 				} else if (char === ">") {
 					tokens.push({
-						type: "tag",
+						type: TokenTypes.Tag,
 						name: charts.join("")
 					});
 					currentState = State.initial;
@@ -61,7 +67,7 @@ export function tokenize(str: string) {
 			case State.text:
 				if (char === "<") {
 					tokens.push({
-						type: "text",
+						type: TokenTypes.Text,
 						content: charts.join("")
 					});
 					currentState = State.tagOpen;
@@ -81,7 +87,7 @@ export function tokenize(str: string) {
 			case State.tagEndName:
 				if (char === ">") {
 					tokens.push({
-						type: "tagEnd",
+						type: TokenTypes.TagEnd,
 						name: charts.join("")
 					});
 					currentState = State.initial;
