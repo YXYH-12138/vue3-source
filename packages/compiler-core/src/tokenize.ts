@@ -21,7 +21,12 @@ export const enum TokenTypes {
 
 const isAlpha = (char: string) => /[a-zA-Z]/.test(char);
 
-export function tokenize(str: string) {
+/**
+ * 将模板标记为tokens
+ * @param str
+ * @returns {Token[]}
+ */
+export function tokenize(str: string): Token[] {
 	let currentState = State.initial;
 	let charts: string[] = [];
 
