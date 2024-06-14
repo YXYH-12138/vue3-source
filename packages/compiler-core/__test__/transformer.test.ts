@@ -101,4 +101,24 @@ describe("traverseNode", () => {
 			]
 		});
 	});
+
+	it("should excute exit fucntion", () => {
+		const stack: string[] = [];
+
+		function exitA() {
+			stack.push("entry A");
+			return () => {
+				stack.push("leave A");
+			};
+		}
+		function exitB() {
+			stack.push("entry B");
+			return () => {
+				stack.push("leave B");
+			};
+		}
+		const ast1 = parser("");
+		transform(ast1, [exitA, exitB]);
+		expect(stack).toEqual(["entry A", "entry B", "leave B", "leave A"]);
+	});
 });

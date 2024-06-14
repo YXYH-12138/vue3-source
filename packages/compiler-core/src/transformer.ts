@@ -1,6 +1,6 @@
 import { type ASTNode } from "./parser";
 
-type NodeTransformsFunction = (node: ASTNode, context: TransformContext) => void;
+type NodeTransformsFunction = (node: ASTNode, context: TransformContext) => void | Function;
 
 export interface TransformContext {
 	parent?: ASTNode;
@@ -14,8 +14,11 @@ export interface TransformContext {
 function traverseNode(ast: ASTNode, context: TransformContext) {
 	context.currentNode = ast;
 
+	const exitFns: Function[] = [];
+
 	for (const transform of context.nodeTransforms) {
-		transform(context.currentNode, context);
+		const onExit = transform(context.currentNode, context);
+		onExit && exitFns.push(onExit);
 		// 转换函数可能会移除节点,需要进行判断
 		if (!context.currentNode) return;
 	}
@@ -28,6 +31,12 @@ function traverseNode(ast: ASTNode, context: TransformContext) {
 			context.parent = ast;
 			traverseNode(children[i], context);
 		}
+	}
+
+	// 退出函数执行 (倒序执行) A,B => B,A
+	let len = exitFns.length;
+	while (len--) {
+		exitFns[len]();
 	}
 }
 
