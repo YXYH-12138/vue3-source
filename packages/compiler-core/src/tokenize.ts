@@ -30,27 +30,24 @@ export function tokenize(str: string) {
 			case State.initial:
 				if (char === "<") {
 					currentState = State.tagOpen;
-					nextStr();
 				} else if (isAlpha(char)) {
 					currentState = State.text;
 					charts.push(char);
-					nextStr();
 				}
+				nextStr();
 				break;
 			case State.tagOpen:
 				if (char === "/") {
 					currentState = State.tagEnd;
-					nextStr();
 				} else if (isAlpha(char)) {
 					currentState = State.tagName;
 					charts.push(char);
-					nextStr();
 				}
+				nextStr();
 				break;
 			case State.tagName:
 				if (isAlpha(char)) {
 					charts.push(char);
-					nextStr();
 				} else if (char === ">") {
 					tokens.push({
 						type: "tag",
@@ -58,8 +55,8 @@ export function tokenize(str: string) {
 					});
 					currentState = State.initial;
 					charts = [];
-					nextStr();
 				}
+				nextStr();
 				break;
 			case State.text:
 				if (char === "<") {
@@ -69,18 +66,17 @@ export function tokenize(str: string) {
 					});
 					currentState = State.tagOpen;
 					charts = [];
-					nextStr();
 				} else if (isAlpha(char)) {
 					charts.push(char);
-					nextStr();
 				}
+				nextStr();
 				break;
 			case State.tagEnd:
 				if (isAlpha(char)) {
 					currentState = State.tagEndName;
 					charts.push(char);
-					nextStr();
 				}
+				nextStr();
 				break;
 			case State.tagEndName:
 				if (char === ">") {
@@ -90,11 +86,13 @@ export function tokenize(str: string) {
 					});
 					currentState = State.initial;
 					charts = [];
-					nextStr();
 				} else if (isAlpha(char)) {
 					charts.push(char);
-					nextStr();
 				}
+				nextStr();
+				break;
+			default:
+				nextStr();
 				break;
 		}
 	}
