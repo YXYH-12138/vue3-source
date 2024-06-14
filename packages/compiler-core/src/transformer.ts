@@ -1,4 +1,11 @@
-import { type ASTNode } from "./parser";
+import { ASTNodeTypes, type ASTNode } from "./parser";
+import {
+	createArrayExpression,
+	createCallExpression,
+	createFunctionDeclaration,
+	createReturnStatement,
+	createStringLiteral
+} from "./ast";
 
 type NodeTransformsFunction = (node: ASTNode, context: TransformContext) => void | Function;
 
@@ -56,4 +63,40 @@ export function transform(ast: ASTNode, nodeTransforms: Array<NodeTransformsFunc
 	};
 
 	traverseNode(ast, context);
+}
+
+/** 转换文本节点 */
+export function transformText(node: ASTNode) {
+	if (node.type !== ASTNodeTypes.Text) return;
+	node.jsNode = createStringLiteral(node.content);
+}
+
+/** 转换元素节点 */
+export function transformElement(node: ASTNode) {
+	return () => {
+		if (node.type !== ASTNodeTypes.Element) return;
+
+		const callExp = createCallExpression("h", [createStringLiteral(node.tag)]);
+
+		if (node.children) {
+			node.children.length == 1
+				? callExp.arguments.push(node.children[0].jsNode)
+				: callExp.arguments.push(createArrayExpression(node.children.map((child) => child.jsNode)));
+		}
+
+		node.jsNode = callExp;
+	};
+}
+
+/** 转换根节点 */
+export function transformRoot(node: ASTNode) {
+	return () => {
+		if (node.type !== ASTNodeTypes.Root) return;
+
+		node.jsNode = createFunctionDeclaration(
+			"render",
+			[],
+			node.children ? [createReturnStatement(node.children.map((child) => child.jsNode))] : []
+		);
+	};
 }

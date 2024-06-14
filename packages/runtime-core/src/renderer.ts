@@ -2,7 +2,7 @@ import { effect, reactive, shallowReactive, shallowReadonly } from "@mini-vue/re
 import { hasOwn, isArray, isFunction, isObject, isOn, isString } from "@mini-vue/shared";
 import schedule from "./schedule";
 import { setCurrentInstance } from "./component";
-import { type VNode, Text as TextType, Fragment, isSameVNodeType } from "./vnode";
+import { type VNode, VNodeType, isSameVNodeType } from "./vnode";
 import { isTeleport } from "./components/Teleport";
 import { type CreateAppFunction, createAppAPI } from "./apiCreateApp";
 
@@ -67,7 +67,7 @@ function baseCreateRenderer<HostElement = RendererElement>({
 				unmount(vnode.component.subTree);
 				excuteHooks(vnode.component.unMounted);
 			}
-		} else if (comp === Fragment) {
+		} else if (comp === VNodeType.Fragment) {
 			(vnode.children as VNode[]).forEach((v) => unmount(v));
 		} else {
 			remove(vnode.el as HostElement);
@@ -82,23 +82,15 @@ function baseCreateRenderer<HostElement = RendererElement>({
 			n1 = null;
 		}
 
-		// 处理文本节点
-		if (isString(n2.type)) {
-			if (!n1) {
-				mountElement(n2, container, anchor);
-			} else {
-				// 更新元素
-				patchElement(n1, n2, container);
-			}
-			// 处理片段
-		} else if (n2.type === Fragment) {
+		// 处理片段节点
+		if (n2.type === VNodeType.Fragment) {
 			if (!n1 && isArray(n2.children)) {
 				n2.children.forEach((v) => patch(undefined, v, container, anchor));
 			} else {
 				patchChildren(n1, n2, container as HostElement);
 			}
 			// 处理文本节点
-		} else if (n2.type === TextType) {
+		} else if (n2.type === VNodeType.Text) {
 			if (!n1) {
 				const el = (n2.el = createText(n2.children as string));
 				insert(el, container as HostElement, anchor as HostElement);
@@ -108,6 +100,14 @@ function baseCreateRenderer<HostElement = RendererElement>({
 					setText(el as Text, n2.children as string);
 				}
 			}
+		} else if (isString(n2.type)) {
+			if (!n1) {
+				mountElement(n2, container, anchor);
+			} else {
+				// 更新元素
+				patchElement(n1, n2, container);
+			}
+			// 处理片段
 		} else if (isObject(n2.type) && isTeleport(n2.type)) {
 			// 处理Teleport组件
 			(n2.type as any).process(n1, n2, container, anchor, {

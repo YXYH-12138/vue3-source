@@ -1,11 +1,13 @@
 import { isObject } from "@mini-vue/shared";
 import type { RendererElement } from "./renderer";
 
-export const Fragment = Symbol();
-export const Text = Symbol();
+export const enum VNodeType {
+	Fragment = "_v_Fragment",
+	Text = "_v_Text"
+}
 
 export interface VNode {
-	type?: string | Symbol | object;
+	type?: string | VNodeType | object;
 	props?: any | null;
 	key?: string | number | null;
 	children?: VNode[] | string | null | number | object;
@@ -15,7 +17,7 @@ export interface VNode {
 }
 
 export function createVNode(
-	type: string | Symbol | object,
+	type: string | VNodeType | object,
 	props?: any | null,
 	children?: VNode[] | string | null | number | object
 ): VNode {
@@ -24,7 +26,7 @@ export function createVNode(
 	}
 
 	if (type == undefined) {
-		type = Text;
+		type = VNodeType.Text;
 	}
 
 	return {

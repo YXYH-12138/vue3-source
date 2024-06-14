@@ -14,5 +14,8 @@
 			"esm-bundler",
 			"cjs"
 		]
+	},
+	"dependencies": {
+		"@mini-vue/runtime-core": "workspace:*"
 	}
 }

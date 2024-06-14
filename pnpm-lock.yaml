@@ -50,6 +50,12 @@ importers:
       vite: 5.2.9_@types+node@18.19.31
       vitest: 1.5.0_@types+node@18.19.31
 
+  packages/compiler-core:
+    specifiers:
+      '@mini-vue/runtime-core': workspace:*
+    dependencies:
+      '@mini-vue/runtime-core': link:../runtime-core
+
 packages:
 
   /@aashutoshrathi/word-wrap/1.2.6:

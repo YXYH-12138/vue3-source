@@ -1,7 +1,7 @@
 import { TokenTypes, tokenize } from "./tokenize";
 
 export interface ASTNode {
-	type: string;
+	type: ASTNodeTypes;
 	tag?: string;
 	children?: ASTNode[];
 	content?: string;
@@ -43,7 +43,7 @@ export function parser(template: string) {
 				elementStack.push(el);
 				break;
 			case TokenTypes.Text:
-				pushElement({ type: "Text", content: token.content });
+				pushElement({ type: ASTNodeTypes.Text, content: token.content });
 				break;
 			case TokenTypes.TagEnd:
 				// 遇到结束标记，将栈顶元素弹出
