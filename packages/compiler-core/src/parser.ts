@@ -1,6 +1,6 @@
 import { TokenTypes, tokenize } from "./tokenize";
 
-interface ASTNode {
+export interface ASTNode {
 	type: string;
 	tag?: string;
 	children?: ASTNode[];

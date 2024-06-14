@@ -21,6 +21,8 @@ export const enum TokenTypes {
 
 const isAlpha = (char: string) => /[a-zA-Z]/.test(char);
 
+const isTag = (chat: string) => isAlpha(chat) || /[0-9]/.test(chat);
+
 /**
  * 将模板标记为tokens
  * @param str
@@ -57,7 +59,7 @@ export function tokenize(str: string): Token[] {
 				nextStr();
 				break;
 			case State.tagName:
-				if (isAlpha(char)) {
+				if (isTag(char)) {
 					charts.push(char);
 				} else if (char === ">") {
 					tokens.push({
@@ -77,7 +79,7 @@ export function tokenize(str: string): Token[] {
 					});
 					currentState = State.tagOpen;
 					charts = [];
-				} else if (isAlpha(char)) {
+				} else {
 					charts.push(char);
 				}
 				nextStr();
@@ -97,7 +99,7 @@ export function tokenize(str: string): Token[] {
 					});
 					currentState = State.initial;
 					charts = [];
-				} else if (isAlpha(char)) {
+				} else if (isTag(char)) {
 					charts.push(char);
 				}
 				nextStr();
