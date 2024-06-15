@@ -53,6 +53,10 @@ export function createReturnStatement(returnStatement: any[]) {
 		return:
 			returnStatement.length === 1
 				? returnStatement[0]
-				: createCallExpression(VNodeType.Fragment, [createArrayExpression(returnStatement)])
+				: // 处理多个根节点的情况
+				  createCallExpression("h", [
+						createStringLiteral(VNodeType.Fragment),
+						createArrayExpression(returnStatement)
+				  ])
 	};
 }

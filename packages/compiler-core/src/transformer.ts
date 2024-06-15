@@ -47,7 +47,10 @@ function traverseNode(ast: ASTNode, context: TransformContext) {
 	}
 }
 
-export function transform(ast: ASTNode, nodeTransforms: Array<NodeTransformsFunction>) {
+export function transform(
+	ast: ASTNode,
+	nodeTransforms: Array<NodeTransformsFunction> = [transformRoot, transformElement, transformText]
+) {
 	const context: TransformContext = {
 		replaceNode(node) {
 			context.parent!.children[context.childIndex!] = node;

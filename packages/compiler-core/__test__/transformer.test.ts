@@ -197,7 +197,7 @@ describe("traverseNode", () => {
 				type: "Identifier",
 				name: "render" // name 用来存储标识符的名称，在这里它就是渲染函数的名称 render
 			},
-			params: [] as any[], // 参数，目前渲染函数还不需要参数，所以这里是一个空数组
+			params: [], // 参数，目前渲染函数还不需要参数，所以这里是一个空数组
 			// 渲染函数的函数体只有一个语句，即 return 语句
 			body: [
 				{
@@ -205,8 +205,12 @@ describe("traverseNode", () => {
 					// 最外层的 h 函数调用
 					return: {
 						type: "CallExpression",
-						callee: { type: "Identifier", name: VNodeType.Fragment },
+						callee: { type: "Identifier", name: "h" },
 						arguments: [
+							{
+								type: "StringLiteral",
+								value: VNodeType.Fragment
+							},
 							// 第二个参数是一个数组
 							{
 								type: "ArrayExpression",
