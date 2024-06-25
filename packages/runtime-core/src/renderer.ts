@@ -416,11 +416,7 @@ function baseCreateRenderer<HostElement = RendererElement>({
 	 * 双端diff算法
 	 *  对比简单diff,执行的DOM移动操作次数更少
 	 */
-	// function patchKeyedChildren(
-	// 	oldChildren: VNode[],
-	// 	newChildren: VNode[],
-	// 	container: RendererElement
-	// ) {
+	// function patchKeyedChildren(oldChildren: VNode[], newChildren: VNode[], container: HostElement) {
 	// 	// 新旧节点开始结束的索引
 	// 	let newStartIndex = 0;
 	// 	let newEndIndex = newChildren.length - 1;
@@ -453,14 +449,14 @@ function baseCreateRenderer<HostElement = RendererElement>({
 	// 			/** 旧头节点与新尾节点key相同 */
 	// 			patch(oldStartVNode, newEndVNode, container);
 	// 			// 将oldStartVNode移动到oldEndVNode的后面
-	// 			insert(oldStartVNode.el!, container, oldEndVNode.el.nextSibling as HTMLElement);
+	// 			insert(oldStartVNode.el! as HostElement, container, oldEndVNode.el.nextSibling);
 	// 			oldStartVNode = oldChildren[++oldStartIndex];
 	// 			newEndVNode = newChildren[--newEndIndex];
 	// 		} else if (oldEndVNode.key === newStartVNode.key) {
 	// 			/** 旧尾节点与新头节点key相同 */
 	// 			patch(oldEndVNode, newStartVNode, container);
 	// 			// 将oldEndVNode移动到oldStartVNode的前面
-	// 			insert(oldEndVNode.el!, container, oldStartVNode.el as HTMLElement);
+	// 			insert(oldEndVNode.el! as HostElement, container, oldStartVNode.el as HostElement);
 	// 			oldEndVNode = oldChildren[--oldEndIndex];
 	// 			newStartVNode = newChildren[++newStartIndex];
 	// 		} else {
@@ -471,10 +467,10 @@ function baseCreateRenderer<HostElement = RendererElement>({
 	// 			if (indexInOld !== -1) {
 	// 				const vnodeToMove = oldChildren[indexInOld];
 	// 				patch(vnodeToMove, newStartVNode, container);
-	// 				insert(vnodeToMove.el!, container, oldStartVNode.el as HTMLElement);
+	// 				insert(vnodeToMove.el as HostElement, container, oldStartVNode.el as HostElement);
 	// 				oldChildren[indexInOld] = undefined;
 	// 			} else {
-	// 				patch(null, newStartVNode, container, oldStartVNode.el as HTMLElement);
+	// 				patch(null, newStartVNode, container, oldStartVNode.el as HostElement);
 	// 			}
 	// 			newStartVNode = newChildren[++newStartIndex];
 	// 		}
@@ -483,7 +479,7 @@ function baseCreateRenderer<HostElement = RendererElement>({
 	// 	// 新子元素中未处理的节点需要逐一挂载
 	// 	if (newStartIndex <= newEndIndex && oldEndIndex < newStartIndex) {
 	// 		for (let i = newStartIndex; i <= newEndIndex; i++) {
-	// 			patch(null, newChildren[i], container, oldStartVNode.el as HTMLElement);
+	// 			patch(null, newChildren[i], container, oldStartVNode.el as HostElement);
 	// 		}
 	// 		/** 处理删除节点的情况 */
 	// 	} else if (oldStartIndex <= oldEndIndex && newEndIndex < newStartIndex) {

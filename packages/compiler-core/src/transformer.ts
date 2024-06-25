@@ -70,14 +70,14 @@ export function transform(
 
 /** 转换文本节点 */
 export function transformText(node: ASTNode) {
-	if (node.type !== ASTNodeTypes.Text) return;
+	if (node.type !== ASTNodeTypes.TEXT) return;
 	node.jsNode = createStringLiteral(node.content);
 }
 
 /** 转换元素节点 */
 export function transformElement(node: ASTNode) {
 	return () => {
-		if (node.type !== ASTNodeTypes.Element) return;
+		if (node.type !== ASTNodeTypes.ELEMENT) return;
 
 		const callExp = createCallExpression("h", [createStringLiteral(node.tag)]);
 
@@ -94,7 +94,7 @@ export function transformElement(node: ASTNode) {
 /** 转换根节点 */
 export function transformRoot(node: ASTNode) {
 	return () => {
-		if (node.type !== ASTNodeTypes.Root) return;
+		if (node.type !== ASTNodeTypes.ROOT) return;
 
 		node.jsNode = createFunctionDeclaration(
 			"render",

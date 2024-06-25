@@ -1,5 +1,5 @@
 import { VNodeType } from "@mini-vue/runtime-core";
-import { ASTNodeTypes, parser, type ASTNode } from "../src/parser";
+import { ASTNodeTypes, baseParse, type ASTNode } from "../src/parser";
 import {
 	transform,
 	transformElement,
@@ -16,20 +16,22 @@ describe("traverseNode", () => {
 			}
 		}
 		function setContent(node: ASTNode, context: TransformContext) {
-			if (node.type === ASTNodeTypes.Text) {
+			if (node.type === ASTNodeTypes.TEXT) {
 				node.content = "set Vue";
 			}
 		}
-		const ast = parser("<p>Vue</p>");
+		const ast = baseParse("<p>Vue</p>");
 		transform(ast, [transformNode, setContent]);
 
 		expect(ast).deep.equal({
-			type: ASTNodeTypes.Root,
+			type: ASTNodeTypes.ROOT,
 			children: [
 				{
-					type: ASTNodeTypes.Element,
+					type: ASTNodeTypes.ELEMENT,
 					tag: "h1",
-					children: [{ type: ASTNodeTypes.Text, content: "set Vue" }]
+					isSelfClosing: false,
+					props: [],
+					children: [{ type: ASTNodeTypes.TEXT, content: "set Vue" }]
 				}
 			]
 		});
@@ -39,28 +41,34 @@ describe("traverseNode", () => {
 		function replaceNode(node: ASTNode, context: TransformContext) {
 			if (node.tag === "h2") {
 				context.replaceNode({
-					type: ASTNodeTypes.Element,
+					type: ASTNodeTypes.ELEMENT,
 					tag: "div",
-					children: [{ type: ASTNodeTypes.Text, content: "replace Vue" }]
+					isSelfClosing: false,
+					props: [],
+					children: [{ type: ASTNodeTypes.TEXT, content: "replace Vue" }]
 				});
 			}
 		}
 
-		const ast = parser("<p>Vue</p><h2>div Vue</h2>");
+		const ast = baseParse("<p>Vue</p><h2>div Vue</h2>");
 		transform(ast, [replaceNode]);
 
 		expect(ast).deep.equal({
-			type: ASTNodeTypes.Root,
+			type: ASTNodeTypes.ROOT,
 			children: [
 				{
-					type: ASTNodeTypes.Element,
+					type: ASTNodeTypes.ELEMENT,
+					isSelfClosing: false,
+					props: [],
 					tag: "p",
-					children: [{ type: ASTNodeTypes.Text, content: "Vue" }]
+					children: [{ type: ASTNodeTypes.TEXT, content: "Vue" }]
 				},
 				{
-					type: ASTNodeTypes.Element,
+					type: ASTNodeTypes.ELEMENT,
 					tag: "div",
-					children: [{ type: ASTNodeTypes.Text, content: "replace Vue" }]
+					isSelfClosing: false,
+					props: [],
+					children: [{ type: ASTNodeTypes.TEXT, content: "replace Vue" }]
 				}
 			]
 		});
@@ -72,37 +80,43 @@ describe("traverseNode", () => {
 				context.removeNode();
 			}
 		}
-		const ast1 = parser("<p>Vue</p><h2>div Vue</h2>");
+		const ast1 = baseParse("<p>Vue</p><h2>div Vue</h2>");
 		transform(ast1, [removeNode1]);
 		expect(ast1).deep.equal({
-			type: ASTNodeTypes.Root,
+			type: ASTNodeTypes.ROOT,
 			children: [
 				{
-					type: ASTNodeTypes.Element,
+					type: ASTNodeTypes.ELEMENT,
 					tag: "p",
-					children: [{ type: ASTNodeTypes.Text, content: "Vue" }]
+					isSelfClosing: false,
+					props: [],
+					children: [{ type: ASTNodeTypes.TEXT, content: "Vue" }]
 				}
 			]
 		});
 
 		function removeNode2(node: ASTNode, context: TransformContext) {
-			if (node.type === ASTNodeTypes.Text) {
+			if (node.type === ASTNodeTypes.TEXT) {
 				context.removeNode();
 			}
 		}
-		const ast2 = parser("<p>Vue</p><h2>div Vue</h2>");
+		const ast2 = baseParse("<p>Vue</p><h2>div Vue</h2>");
 		transform(ast2, [removeNode2]);
 		expect(ast2).deep.equal({
-			type: ASTNodeTypes.Root,
+			type: ASTNodeTypes.ROOT,
 			children: [
 				{
-					type: ASTNodeTypes.Element,
+					type: ASTNodeTypes.ELEMENT,
 					tag: "p",
+					isSelfClosing: false,
+					props: [],
 					children: []
 				},
 				{
-					type: ASTNodeTypes.Element,
+					type: ASTNodeTypes.ELEMENT,
 					tag: "h2",
+					isSelfClosing: false,
+					props: [],
 					children: []
 				}
 			]
@@ -124,13 +138,13 @@ describe("traverseNode", () => {
 				stack.push("leave B");
 			};
 		}
-		const ast1 = parser("");
+		const ast1 = baseParse("");
 		transform(ast1, [exitA, exitB]);
 		expect(stack).toEqual(["entry A", "entry B", "leave B", "leave A"]);
 	});
 
 	it("should transform to jsNode", () => {
-		const ast1 = parser("<div><p>hello Vue</p><p>Template</p></div>");
+		const ast1 = baseParse("<div><p>hello Vue</p><p>Template</p></div>");
 		transform(ast1, [transformRoot, transformElement, transformText]);
 		expect(ast1.jsNode).toEqual({
 			type: "FunctionDeclaration", // 代表该节点是函数声明
@@ -188,7 +202,7 @@ describe("traverseNode", () => {
 			]
 		});
 
-		const ast2 = parser("<p>hello Vue</p><p>Template</p>");
+		const ast2 = baseParse("<p>hello Vue</p><p>Template</p>");
 		transform(ast2, [transformRoot, transformElement, transformText]);
 		expect(ast2.jsNode).toEqual({
 			type: "FunctionDeclaration", // 代表该节点是函数声明

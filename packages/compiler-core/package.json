@@ -16,6 +16,7 @@
 		]
 	},
 	"dependencies": {
-		"@mini-vue/runtime-core": "workspace:*"
+		"@mini-vue/runtime-core": "workspace:*",
+		"entities": "^4.5.0"
 	}
 }

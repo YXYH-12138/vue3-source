@@ -1,10 +1,10 @@
 import { generate } from "../src/generate";
-import { parser } from "../src/parser";
+import { baseParse } from "../src/parser";
 import { transform } from "../src/transformer";
 
 describe("generate", () => {
 	it("should generate code for simple template", () => {
-		const ast = parser(`<div><p>Vue</p><p>Template</p></div>`);
+		const ast = baseParse(`<div><p>Vue</p><p>Template</p></div>`);
 		transform(ast);
 		const code = generate(ast.jsNode);
 

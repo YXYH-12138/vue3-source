@@ -53,8 +53,10 @@ importers:
   packages/compiler-core:
     specifiers:
       '@mini-vue/runtime-core': workspace:*
+      entities: ^4.5.0
     dependencies:
       '@mini-vue/runtime-core': link:../runtime-core
+      entities: 4.5.0
 
 packages:
 
@@ -1140,6 +1142,11 @@ packages:
     dependencies:
       once: 1.4.0
     dev: true
+
+  /entities/4.5.0:
+    resolution: {integrity: sha512-V0hjH4dGPh9Ao5p0MoRY6BVqtwCjhz6vI5LT8AJ55H+4g9/4vbHx1I54fS0XuclLhDHArPQCiMjDxjaL8fPxhw==}
+    engines: {node: '>=0.12'}
+    dev: false
 
   /es-module-lexer/1.5.3:
     resolution: {integrity: sha512-i1gCgmR9dCl6Vil6UKPI/trA69s08g/syhiDK9TG0Nf1RJjjFI+AzoWW7sPufzkgYAn861skuCwJa0pIIHYxvg==}
