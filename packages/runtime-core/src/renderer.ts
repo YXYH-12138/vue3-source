@@ -543,6 +543,8 @@ function baseCreateRenderer<HostElement = RendererElement>({
 		// (a b)
 		// (a b) c
 		// startIndex = 2, oldEndIndex = 1, newEndIndex = 2
+		// (a b)
+		// c (a b)
 		// startIndex = 0, oldEndIndex = -1, newEndIndex = 0
 		if (startIndex > oldEndIndex) {
 			if (startIndex <= newEndIndex) {
@@ -586,7 +588,7 @@ function baseCreateRenderer<HostElement = RendererElement>({
 
 			// 新节点长度
 			const toBePatched = newEndIndex - startIndex + 1;
-			// 新的一组子节点中的节点在旧的一组子节点中的位置索引
+			// 根据旧节点在新节点中的索引保存旧节点索引，用于求出最长递增子序列的索引
 			const source = new Array(toBePatched).fill(-1);
 			// 遍历旧节点中未处理的节点
 			for (let i = startIndex; i <= oldEndIndex; i++) {
@@ -596,6 +598,7 @@ function baseCreateRenderer<HostElement = RendererElement>({
 					unmount(prevChild);
 					continue;
 				}
+				// 根据新节点的映射关系，找到旧节点在新节点中的索引
 				const k = keyIndex[prevChild.key];
 				if (k != undefined) {
 					source[k - startIndex] = i;
@@ -612,10 +615,13 @@ function baseCreateRenderer<HostElement = RendererElement>({
 				}
 			}
 
-			// 求出最长递增的子序列
+			// 求出最长递增的子序列的索引
 			const increasingNewIndexSequence = moved ? getSequence(source) : [];
 			let j = increasingNewIndexSequence.length - 1;
 
+			/**
+			 * 从尾部开始遍历
+			 */
 			for (let i = toBePatched - 1; i >= 0; i--) {
 				if (source[i] === -1) {
 					const nextIndex = startIndex + i;
