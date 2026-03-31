@@ -5,8 +5,11 @@
 	"type": "module",
 	"scripts": {
 		"dev": "node scripts/dev.js reactivity -f global",
+		"dev-rd": "node scripts/dev-rolldown.js reactivity",
 		"build": "node scripts/build.js",
+		"build-rd": "node scripts/build-rolldown.js",
 		"build-dts": "rollup -c rollup.dts.config.js",
+		"build-rd-dts": "rollup -c rollup.dts.config.js",
 		"test": "vitest"
 	},
 	"keywords": [],
@@ -27,6 +30,8 @@
 		"execa": "4.0.2",
 		"minimist": "^1.2.7",
 		"prettier": "^2.7.1",
+		"rolldown": "1.0.0-rc.12",
+		"rolldown-plugin-dts": "^0.23.2",
 		"rollup": "^3.19.1",
 		"rollup-plugin-dts": "^6.1.0",
 		"rollup-plugin-esbuild": "^6.1.1",
@@ -37,3 +42,4 @@
 		"vitest": "^1.4.0"
 	}
 }
+

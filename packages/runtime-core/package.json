@@ -19,7 +19,7 @@
 		]
 	},
 	"dependencies": {
-		"@mini-vue/reactivity": "*",
+		"@mini-vue/reactivity": "workspace:*",
 		"@mini-vue/shared": "workspace:*"
 	}
 }

@@ -43,7 +43,7 @@ async function run() {
 				"pnpm",
 				[
 					"run",
-					"build-dts",
+					"build-rd-dts",
 					...(targets.length ? ["--environment", `TARGETS:${resolvedTargets.join(",")}`] : [])
 				],
 				{
@@ -113,11 +113,15 @@ function fuzzyMatchTarget(partialTargets, includeAllMatching) {
 	}
 }
 
+/**
+ * 打包
+ * @param {string} target
+ */
 async function build(target) {
 	const env = devOnly ? "development" : "production";
 
 	await execa(
-		"rollup",
+		"rolldown",
 		[
 			"-c",
 			"--environment",

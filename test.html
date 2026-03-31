@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Document</title>
+	</head>
+	<body>
+		<script type="importmap">
+			{
+				"imports": {
+					"shared": "./packages/shared/dist/shared.esm-bundler.js",
+					"reactivity": "./packages/reactivity/dist/reactivity.esm.js"
+				}
+			}
+		</script>
+		<!-- <script src="./packages/reactivity/dist/reactivity.global.js"></script> -->
+		<!-- <script type="module" src="./packages/shared/dist/shared.esm-bundler.js"></script> -->
+		<!-- <script type="module" src="./packages/reactivity/dist/reactivity.esm.js"></script> -->
+		<script type="module">
+			// "@min_vue/shared": "./packages/shared/dist/shared.esm-bundler.js"
+			import { hasChanged } from "shared";
+			// import { ref, effect } from "reactivity";
+
+			console.log(hasChanged(1, 2));
+
+			// const a = ref(0);
+
+			// effect(() => console.log("test", a.value));
+			// setTimeout(() => {
+			// 	a.value++;
+			// }, 1000);
+
+			// const a = VueReactivity.ref(0);
+
+			// VueReactivity.effect(() => console.log("test", a.value));
+			// setTimeout(() => {
+			// 	a.value++;
+			// }, 1000);
+		</script>
+	</body>
+</html>
