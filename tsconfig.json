@@ -24,11 +24,6 @@
 			"@vue/*": ["packages/*/src"]
 		}
 	},
-	"ts-node": {
-		"experimentalSpecifierResolution": "node",
-		"transpileOnly": true,
-		"esm": true
-	},
 	"include": ["packages/**/*.ts"]
 	// "references": [{ "path": "./tsconfig.node.json" }]
 }

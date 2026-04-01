@@ -24,11 +24,10 @@
 		"@typescript-eslint/eslint-plugin": "^5.54.1",
 		"@typescript-eslint/parser": "^5.54.1",
 		"esbuild": "^0.20.2",
-		"eslint": "^8.25.0",
-		"eslint-config-prettier": "^8.7.0",
-		"eslint-plugin-prettier": "^4.2.1",
 		"execa": "4.0.2",
 		"minimist": "^1.2.7",
+		"oxfmt": "^0.43.0",
+		"oxlint": "^1.58.0",
 		"prettier": "^2.7.1",
 		"rolldown": "1.0.0-rc.12",
 		"rolldown-plugin-dts": "^0.23.2",
@@ -36,10 +35,8 @@
 		"rollup-plugin-dts": "^6.1.0",
 		"rollup-plugin-esbuild": "^6.1.1",
 		"sucrase": "^3.29.0",
-		"ts-node": "^10.9.2",
 		"typescript": "^4.8.4",
 		"vite": "^5.2.2",
 		"vitest": "^1.4.0"
 	}
 }
-

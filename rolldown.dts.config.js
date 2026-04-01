@@ -12,7 +12,7 @@ export default targets.map(
 				file: `packages/${pkg}/dist/${pkg}.d.ts`,
 				format: "es"
 			},
-			plugins: [dts()]
+			plugins: [dts({ resolver: "oxc" })]
 		};
 	}
 );
