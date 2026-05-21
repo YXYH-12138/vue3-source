@@ -105,11 +105,11 @@ describe("effect", () => {
     // should be called on first trigger
     obj.foo++;
     expect(scheduler).toHaveBeenCalledTimes(1);
-    // // should not run yet
+    // should not run yet
     expect(dummy).toBe(1);
-    // // manually run
+    // manually run
     run();
-    // // should have run
+    // should have run
     expect(dummy).toBe(2);
   });
 

@@ -1,25 +1,16 @@
+// oxlint-disable typescript/no-this-alias
 import { isMap } from "@mini-vue/shared";
 import { ITERATE_KEY, MAP_KEYS_ITERATE_KEY } from "./baseHandlers";
 import { TriggerOpTypes } from "./operations";
 
 type Dep = Set<ReactiveEffect>;
-interface IEffectOptions {
+interface ReactiveEffectOptions {
   schedule?: (effect: ReactiveEffect) => any;
   lazy?: boolean;
 }
-interface IEffectFnOptions {
-  options: IEffectOptions;
-  deps: Array<Set<ReactiveEffect>>;
-}
-export interface ReactiveEffect
-  extends Function,
-    IEffectOptions,
-    IEffectFnOptions {}
 
 // 当前激活的副作用
 let activeEffect: ReactiveEffect;
-
-const effectStack: ReactiveEffect[] = [];
 
 const targetMap = new WeakMap<object, Map<string | symbol, Dep>>();
 
@@ -139,31 +130,60 @@ function triggerEffect(deps: Array<ReactiveEffect>) {
     // 如果当前要执行的effect和激活的effect相同，则跳过执行
     if (activeEffect === effect) return;
     // 调度器
-    if (effect.options.schedule) {
-      effect.options.schedule(effect);
+    if (effect.schedule) {
+      effect.schedule(effect);
     } else {
-      effect();
+      effect.run();
     }
   });
 }
 
-export function effect(fn: () => any, options: IEffectOptions = {}) {
-  const effectFn: ReactiveEffect = () => {
-    cleanup(effectFn);
-    activeEffect = effectFn;
-    effectStack.push(effectFn);
-    const res = fn();
-    // 执行完后弹出栈顶的effect
-    effectStack.pop();
-    // 还原之前的effect
-    activeEffect = effectStack[effectStack.length - 1];
-    return res;
-  };
-  effectFn.options = options;
-  effectFn.deps = [];
+class ReactiveEffect {
+  // 是否是激活的
+  _active = true;
 
-  if (!options.lazy) {
-    effectFn();
+  deps: Set<ReactiveEffect>[];
+
+  lazy?: boolean;
+
+  constructor(
+    public fn: () => any,
+    public schedule: ReactiveEffectOptions["schedule"]
+  ) {
+    this.deps = [];
   }
-  return effectFn;
+
+  run() {
+    if (!this._active) return this.fn();
+
+    let lastEffect = activeEffect;
+
+    // 清楚副作用
+    cleanup(this);
+
+    try {
+      activeEffect = this;
+      return this.fn();
+    } finally {
+      activeEffect = lastEffect;
+    }
+  }
+}
+
+export interface ReactiveEffectRunner<T = any> {
+  (): T;
+  effect: ReactiveEffect;
+}
+
+export function effect(fn: () => any, options: ReactiveEffectOptions = {}) {
+  const _effect = new ReactiveEffect(fn, options.schedule);
+
+  if (!options || !options.lazy) {
+    _effect.run();
+  }
+
+  const runner = _effect.run.bind(_effect) as ReactiveEffectRunner;
+  runner.effect = _effect;
+
+  return runner;
 }
