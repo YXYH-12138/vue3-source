@@ -1,11 +1,11 @@
 {
 	"$schema": "./node_modules/oxlint/configuration_schema.json",
-	"plugins": null,
+	// "plugins": null,
 	"categories": {},
-	"rules": {},
+	"rules": { "no-unused-expressions": "allow" },
 	"settings": {
 		"jsx-a11y": {
-			"polymorphicPropName": null,
+			// "polymorphicPropName": null,
 			"components": {},
 			"attributes": {}
 		},

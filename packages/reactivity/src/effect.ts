@@ -22,7 +22,7 @@ let activeEffect: ReactiveEffect;
 const effectStack: ReactiveEffect[] = [];
 
 const targetMap = new WeakMap<object, Map<string | symbol, Dep>>();
-// console.log(targetMap);
+
 // 是否进行依赖收集的标记
 let shouldTrack = true;
 /**

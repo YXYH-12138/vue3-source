@@ -19,7 +19,7 @@ const devOnly = args.devOnly || args.d;
 // 生成sourceMap
 const sourceMap = (args.sourcemap || args.s) ?? true;
 // 打包.d.ts文件
-const buildTypes = args.withTypes || args.t;
+const buildTypes = (args.withTypes || args.t) ?? true;
 
 /** @type {boolean | undefined} */
 const buildAllMatching = args.all || args.a;
