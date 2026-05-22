@@ -1,12 +1,12 @@
 // oxlint-disable typescript/no-this-alias
-import { isMap } from "@mini-vue/shared";
+import { extend, isMap } from "@mini-vue/shared";
 import { ITERATE_KEY, MAP_KEYS_ITERATE_KEY } from "./baseHandlers";
 import { TriggerOpTypes } from "./operations";
 
 type Dep = Map<ReactiveEffect, number> & { cleanup: () => void };
 
 interface ReactiveEffectOptions {
-  schedule?: (effect: ReactiveEffect) => any;
+  scheduler?: () => any;
   lazy?: boolean;
 }
 
@@ -62,13 +62,15 @@ class ReactiveEffect {
 
   _depsLength = 0;
 
+  _running = 0;
+
   deps: Dep[];
 
   lazy?: boolean;
 
   constructor(
     public fn: () => any,
-    public schedule: ReactiveEffectOptions["schedule"]
+    public scheduler: ReactiveEffectOptions["scheduler"]
   ) {
     this.deps = [];
   }
@@ -79,12 +81,16 @@ class ReactiveEffect {
     let lastEffect = activeEffect;
 
     try {
+      this._running++;
+
       activeEffect = this;
 
       preCleanEffect(this);
 
       return this.fn();
     } finally {
+      this._running--;
+
       postCleanEffect(this);
 
       activeEffect = lastEffect;
@@ -210,32 +216,48 @@ export function trigger(
     }
   }
 
-  // 可以避免重复执行，当effect执行时由于删除了当前的依赖，会重新收集，然后dep长度会加+1，导致无限循环
-  const effects: ReactiveEffect[] = [];
   for (const dep of deps) {
-    if (dep) {
-      effects.push(...dep.keys());
+    triggerEffects(dep);
+  }
+}
+
+const queueEffectschedulerrs: (() => void)[] = [];
+
+let pauseScheduleStack = 0;
+export function pauseScheduling() {
+  pauseScheduleStack++;
+}
+
+export function resetScheduling() {
+  pauseScheduleStack--;
+  while (!pauseScheduleStack && queueEffectschedulerrs.length) {
+    queueEffectschedulerrs.shift()!();
+  }
+}
+
+function triggerEffects(dep: Dep) {
+  pauseScheduling();
+
+  for (const effect of dep.keys()) {
+    // 如果副作用函数正在运行，则跳过
+    if (effect._running) continue;
+    // 调度器
+    if (effect.scheduler) {
+      queueEffectschedulerrs.push(effect.scheduler);
     }
   }
 
-  triggerEffect(effects);
-}
-
-function triggerEffect(deps: Array<ReactiveEffect>) {
-  deps.forEach((effect) => {
-    // 如果当前要执行的effect和激活的effect相同，则跳过执行
-    if (activeEffect === effect) return;
-    // 调度器
-    if (effect.schedule) {
-      effect.schedule(effect);
-    } else {
-      effect.run();
-    }
-  });
+  resetScheduling();
 }
 
 export function effect(fn: () => any, options: ReactiveEffectOptions = {}) {
-  const _effect = new ReactiveEffect(fn, options.schedule);
+  const _effect = new ReactiveEffect(fn, () => {
+    _effect.run();
+  });
+
+  if (options) {
+    extend(_effect, options);
+  }
 
   if (!options || !options.lazy) {
     _effect.run();

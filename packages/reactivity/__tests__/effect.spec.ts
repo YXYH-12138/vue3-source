@@ -32,6 +32,26 @@ describe("effect", () => {
     expect(fnSpy).toHaveBeenCalledTimes(2);
   });
 
+  it("should only run the function once", () => {
+    const fnSpy = vi.fn(() => {});
+    const counter = reactive({ age: 0 });
+    effect(() => {
+      counter.age;
+      effect(() => {
+        counter.age;
+        fnSpy();
+      });
+    });
+
+    expect(fnSpy).toHaveBeenCalledTimes(1);
+
+    counter.age = 2;
+    expect(fnSpy).toHaveBeenCalledTimes(3);
+
+    // counter.age = 3;
+    // expect(fnSpy).toHaveBeenCalledTimes(5);
+  });
+
   it("should clean up the dependencies", () => {
     const state = reactive({ age: 0, name: "jack", flag: true, f1: 0, f2: 2 });
     const fnSpy = vi.fn();
@@ -135,7 +155,7 @@ describe("effect", () => {
       () => {
         dummy = obj.foo;
       },
-      { schedule: scheduler }
+      { scheduler }
     );
     expect(scheduler).not.toHaveBeenCalled();
     expect(dummy).toBe(1);
