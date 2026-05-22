@@ -10,12 +10,14 @@
 		"build-rd": "node scripts/build-rolldown.js",
 		"build-dts": "rollup -c rollup.dts.config.js",
 		"build-rd-dts": "rollup -c rollup.dts.config.js",
-		"test": "vitest"
+		"test": "vitest",
+		"test-bench": "vitest bench"
 	},
 	"keywords": [],
 	"author": "coderred",
 	"license": "ISC",
 	"devDependencies": {
+		"@codspeed/vitest-plugin": "^5.4.0",
 		"@rollup/plugin-commonjs": "^24.0.1",
 		"@rollup/plugin-node-resolve": "^15.0.1",
 		"@rollup/plugin-typescript": "^11.0.0",
@@ -34,6 +36,7 @@
 		"rollup-plugin-dts": "^6.1.0",
 		"rollup-plugin-esbuild": "^6.1.1",
 		"sucrase": "^3.29.0",
+		"tsc": "^2.0.4",
 		"typescript": "^4.8.4",
 		"vite": "^5.2.2",
 		"vitest": "^1.4.0"

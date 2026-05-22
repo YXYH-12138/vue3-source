@@ -9,6 +9,11 @@ interface ReactiveEffectOptions {
   lazy?: boolean;
 }
 
+export interface ReactiveEffectRunner<T = any> {
+  (): T;
+  effect: ReactiveEffect;
+}
+
 // 当前激活的副作用
 let activeEffect: ReactiveEffect;
 
@@ -46,14 +51,17 @@ function cleanup(effect: ReactiveEffect) {
  */
 export function track(target: object, key: string | symbol) {
   if (!activeEffect || !shouldTrack) return;
+
   let depsMap = targetMap.get(target);
   if (!depsMap) {
     targetMap.set(target, (depsMap = new Map()));
   }
+
   let dep = depsMap.get(key);
   if (!dep) {
     depsMap.set(key, (dep = new Set()));
   }
+
   dep.add(activeEffect);
   activeEffect.deps.push(dep);
 }
@@ -158,7 +166,7 @@ class ReactiveEffect {
 
     let lastEffect = activeEffect;
 
-    // 清楚副作用
+    // 清除副作用
     cleanup(this);
 
     try {
@@ -168,11 +176,6 @@ class ReactiveEffect {
       activeEffect = lastEffect;
     }
   }
-}
-
-export interface ReactiveEffectRunner<T = any> {
-  (): T;
-  effect: ReactiveEffect;
 }
 
 export function effect(fn: () => any, options: ReactiveEffectOptions = {}) {

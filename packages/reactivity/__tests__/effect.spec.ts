@@ -51,6 +51,7 @@ describe("effect", () => {
     counter.num1 = counter.num2 = 7;
     expect(dummy).toBe(21);
   });
+
   it("should handle multiple effects", () => {
     let dummy1, dummy2;
     const counter = reactive({ num: 0 });
@@ -87,6 +88,7 @@ describe("effect", () => {
     counter.num = 2;
     expect(dummy).toBe(2);
   });
+
   it("scheduler", () => {
     let dummy;
     let run: any;
