@@ -62,8 +62,12 @@ export function track(target: object, key: string | symbol) {
     depsMap.set(key, (dep = new Set()));
   }
 
-  dep.add(activeEffect);
-  activeEffect.deps.push(dep);
+  trackEffect(activeEffect, dep);
+}
+
+function trackEffect(effect: ReactiveEffect, dep: Dep) {
+  dep.add(effect);
+  effect.deps.includes(dep) || effect.deps.push(dep);
 }
 
 /**
@@ -82,6 +86,7 @@ export function trigger(
 ) {
   const depsMap = targetMap.get(target);
   if (!depsMap) return;
+
   const deps: Array<Dep | undefined> = [];
 
   deps.push(depsMap.get(key));

@@ -45,9 +45,12 @@ describe("effect", () => {
   it("should observe multiple properties", () => {
     let dummy;
     const counter = reactive({ num1: 0, num2: 0 });
-    effect(() => (dummy = counter.num1 + counter.num1 + counter.num2));
+    const runner = effect(
+      () => (dummy = counter.num1 + counter.num1 + counter.num2)
+    );
 
     expect(dummy).toBe(0);
+    expect(runner.effect.deps.length).toBe(2);
     counter.num1 = counter.num2 = 7;
     expect(dummy).toBe(21);
   });

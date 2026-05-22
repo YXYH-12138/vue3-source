@@ -1,6 +1,9 @@
 // @ts-check
 
-import { reactive, effect } from "@mini-vue/reactivity"; // 注意路径和后缀
+import { reactive, effect } from "@mini-vue/reactivity";
+
+// 创建 10000 个 effect 占用的总内存: 4.1000 MB
+// 平均每个 effect 占用大约: 429.92 Bytes
 
 // 辅助函数：将字节转换为 KB / MB，方便阅读
 function formatMemory(bytes) {
@@ -9,7 +12,7 @@ function formatMemory(bytes) {
 
 function runMemoryTest() {
 	// 1. 准备基础数据
-	const obj = reactive({ count: 0 });
+	const counter = reactive({ num1: 1 });
 	const effects = []; // 用数组存起来，防止被意外回收
 	const COUNT = 10000;
 
@@ -27,7 +30,7 @@ function runMemoryTest() {
 	// 4. 创建 effect
 	for (let i = 0; i < COUNT; i++) {
 		const runner = effect(() => {
-			obj.count;
+			counter.num1 + counter.num1 + counter.num1;
 		});
 		effects.push(runner);
 	}
