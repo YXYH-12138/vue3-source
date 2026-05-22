@@ -3,7 +3,8 @@ import { isMap } from "@mini-vue/shared";
 import { ITERATE_KEY, MAP_KEYS_ITERATE_KEY } from "./baseHandlers";
 import { TriggerOpTypes } from "./operations";
 
-type Dep = Set<ReactiveEffect>;
+type Dep = Map<ReactiveEffect, number> & { cleanup: () => void };
+
 interface ReactiveEffectOptions {
   schedule?: (effect: ReactiveEffect) => any;
   lazy?: boolean;
@@ -34,13 +35,67 @@ export function enableTracking() {
   shouldTrack = true;
 }
 
-/**
- * 清除副作用
- * @param effect
- */
-function cleanup(effect: ReactiveEffect) {
-  effect.deps.forEach((dep) => dep.delete(effect));
-  effect.deps.length = 0;
+function preCleanEffect(effect: ReactiveEffect) {
+  effect._trackId++;
+  effect._depsLength = 0;
+}
+
+function postCleanEffect(effect: ReactiveEffect) {
+  let maxLen = effect.deps.length;
+  const depsLen = effect._depsLength;
+
+  if (maxLen > effect._depsLength) {
+    for (let i = depsLen; i < maxLen; i++) {
+      // 删除对应的effect
+      cleanDepEffect(effect, effect.deps[i]);
+    }
+    // 重置长度
+    effect.deps.length = depsLen;
+  }
+}
+
+class ReactiveEffect {
+  // 是否是激活的
+  _active = true;
+
+  _trackId = 0;
+
+  _depsLength = 0;
+
+  deps: Dep[];
+
+  lazy?: boolean;
+
+  constructor(
+    public fn: () => any,
+    public schedule: ReactiveEffectOptions["schedule"]
+  ) {
+    this.deps = [];
+  }
+
+  run() {
+    if (!this._active) return this.fn();
+
+    let lastEffect = activeEffect;
+
+    try {
+      activeEffect = this;
+
+      preCleanEffect(this);
+
+      return this.fn();
+    } finally {
+      postCleanEffect(this);
+
+      activeEffect = lastEffect;
+    }
+  }
+}
+
+function createDepMap(cleanup: () => void) {
+  const dep = new Map() as Dep;
+  dep.cleanup = cleanup;
+  return dep;
 }
 
 /**
@@ -59,15 +114,43 @@ export function track(target: object, key: string | symbol) {
 
   let dep = depsMap.get(key);
   if (!dep) {
-    depsMap.set(key, (dep = new Set()));
+    depsMap.set(
+      key,
+      (dep = createDepMap(() => {
+        depsMap.delete(key);
+      }))
+    );
   }
 
   trackEffect(activeEffect, dep);
 }
 
+function cleanDepEffect(effect: ReactiveEffect, dep: Dep) {
+  dep.delete(effect);
+  if (dep.size === 0) {
+    dep.cleanup();
+  }
+}
+
 function trackEffect(effect: ReactiveEffect, dep: Dep) {
-  dep.add(effect);
-  effect.deps.includes(dep) || effect.deps.push(dep);
+  // 如果没有则需要进行依赖收集
+  if (dep.get(effect) !== effect._trackId) {
+    // 收集依赖
+    dep.set(effect, effect._trackId);
+
+    const oldDep = effect.deps[effect._depsLength];
+    if (oldDep !== dep) {
+      // 如果有旧的dep，则需要清除旧的dep
+      if (oldDep) {
+        cleanDepEffect(effect, oldDep);
+      }
+
+      // 更新effect对象中的dep
+      effect.deps[effect._depsLength] = dep;
+    }
+
+    effect._depsLength++;
+  }
 }
 
 /**
@@ -131,7 +214,7 @@ export function trigger(
   const effects: ReactiveEffect[] = [];
   for (const dep of deps) {
     if (dep) {
-      effects.push(...dep);
+      effects.push(...dep.keys());
     }
   }
 
@@ -149,38 +232,6 @@ function triggerEffect(deps: Array<ReactiveEffect>) {
       effect.run();
     }
   });
-}
-
-class ReactiveEffect {
-  // 是否是激活的
-  _active = true;
-
-  deps: Set<ReactiveEffect>[];
-
-  lazy?: boolean;
-
-  constructor(
-    public fn: () => any,
-    public schedule: ReactiveEffectOptions["schedule"]
-  ) {
-    this.deps = [];
-  }
-
-  run() {
-    if (!this._active) return this.fn();
-
-    let lastEffect = activeEffect;
-
-    // 清除副作用
-    cleanup(this);
-
-    try {
-      activeEffect = this;
-      return this.fn();
-    } finally {
-      activeEffect = lastEffect;
-    }
-  }
 }
 
 export function effect(fn: () => any, options: ReactiveEffectOptions = {}) {

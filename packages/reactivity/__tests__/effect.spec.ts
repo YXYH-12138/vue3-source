@@ -32,6 +32,38 @@ describe("effect", () => {
     expect(fnSpy).toHaveBeenCalledTimes(2);
   });
 
+  it("should clean up the dependencies", () => {
+    const state = reactive({ age: 0, name: "jack", flag: true, f1: 0, f2: 2 });
+    const fnSpy = vi.fn();
+
+    const runner = effect(() => {
+      if (state.flag) {
+        state.age;
+        state.f1;
+        state.f2;
+      } else {
+        state.name;
+      }
+      fnSpy();
+    });
+    expect(runner.effect.deps.length).toBe(4);
+
+    // 初始执行一次
+    expect(fnSpy).toHaveBeenCalledTimes(1);
+
+    state.flag = false;
+
+    // 切换 flag，应该触发一次
+    expect(fnSpy).toHaveBeenCalledTimes(2);
+
+    expect(runner.effect.deps.length).toBe(2);
+
+    state.age = 2;
+
+    // ❗ age 不再被追踪，不应再触发
+    expect(fnSpy).toHaveBeenCalledTimes(2);
+  });
+
   it("should observe basic properties", () => {
     let dummy;
     const counter = reactive({ num: 0 });
