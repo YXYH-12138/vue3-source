@@ -2,7 +2,7 @@
 	"$schema": "./node_modules/oxlint/configuration_schema.json",
 	// "plugins": null,
 	"categories": {},
-	"rules": { "no-unused-expressions": "allow" },
+	"rules": { "no-unused-expressions": "allow", "typescript/no-this-alias": "off" },
 	"settings": {
 		"jsx-a11y": {
 			// "polymorphicPropName": null,

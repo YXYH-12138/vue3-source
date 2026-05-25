@@ -1,6 +1,6 @@
 import { hasChanged, isObject } from "@mini-vue/shared";
 import { toReactive } from "./reactive";
-import { track, trigger } from "./effect";
+import { type Dep, activeEffect, createDepMap, trackEffect, triggerEffects } from "./effect";
 
 export interface Ref<T = any> {
 	value: T;
@@ -26,24 +26,61 @@ function createRef<T>(rawValue: T, shallow: boolean): Ref<T> {
 }
 
 class RefImpl<T> {
-	public readonly __v_isRef = true;
+	readonly __v_isRef = true;
+
+	dep: Dep;
+
 	private _value: T;
 
-	constructor(value: T, public readonly __v_isShallow: boolean) {
+	constructor(
+		value: T,
+		readonly __v_isShallow: boolean
+	) {
 		this._value = __v_isShallow ? value : toReactive(value);
 	}
 
 	get value() {
-		track(this, "value");
+		trackRefValue(this);
 		return this._value;
 	}
 
 	set value(newValue) {
 		if (hasChanged(this._value, newValue)) {
 			this._value = this.__v_isShallow ? newValue : toReactive(newValue);
-			trigger(this, "value");
+			triggerRefValue(this);
 		}
 	}
+}
+
+/**
+ * 收集ref的依赖
+ * @param ref
+ * @returns
+ */
+function trackRefValue(ref: RefImpl<any>) {
+	if (!activeEffect) return;
+	// 如果没有dep，则需要创建一个dep
+	if (!ref.dep) {
+		ref.dep = createDepMap(() => {
+			ref.dep = undefined;
+		});
+	}
+	trackEffect(activeEffect, ref.dep);
+}
+/**
+ * 触发ref的依赖
+ * @param ref
+ */
+function triggerRefValue(ref: RefImpl<any>) {
+	ref.dep && triggerEffects(ref.dep);
+}
+
+export function unRef(ref: any) {
+	return isRef(ref) ? ref.value : ref;
+}
+
+export function isRef(r: any): r is Ref {
+	return !!(r && r.__v_isRef === true);
 }
 
 export function toRef<T extends object, K extends keyof T>(target: T, key: K): Ref<T[K]> {
@@ -82,12 +119,4 @@ class ObjectRefImpl<T extends object, K extends keyof T> {
 	set value(newVal) {
 		this._object[this._key] = newVal;
 	}
-}
-
-export function unRef(ref: any) {
-	return isRef(ref) ? ref.value : ref;
-}
-
-export function isRef(r: any): r is Ref {
-	return !!(r && r.__v_isRef === true);
 }
