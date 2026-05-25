@@ -1,67 +1,57 @@
 import { def, isObject, toRawType } from "@mini-vue/shared";
 import {
-  nomoralHandlers,
-  readonlyHandlers,
-  shallowHandlers,
-  shallowReadonlyHandlers,
+	nomoralHandlers,
+	readonlyHandlers,
+	shallowHandlers,
+	shallowReadonlyHandlers
 } from "./baseHandlers";
-import type { Ref } from "./ref";
+import type { Ref, UnwrapRefSimple } from "./ref";
 
 export const enum ReactiveFlags {
-  SKIP = "__v_skip",
-  IS_REACTIVE = "__v_isReactive",
-  IS_READONLY = "__v_isReadonly",
-  IS_SHALLOW = "__v_isShallow",
-  RAW = "__v_raw",
+	SKIP = "__v_skip",
+	IS_REACTIVE = "__v_isReactive",
+	IS_READONLY = "__v_isReadonly",
+	IS_SHALLOW = "__v_isShallow",
+	RAW = "__v_raw"
 }
 
-type BaseTypes = string | number | boolean;
+export declare const ShallowReactiveMarker: unique symbol;
+
+export type ShallowReactive<T> = T & { [ShallowReactiveMarker]?: true };
 
 type DeepReadonly<T> = {
-  readonly [P in keyof T]: T[P] extends object ? DeepReadonly<T[P]> : T[P];
+	readonly [P in keyof T]: T[P] extends object ? DeepReadonly<T[P]> : T[P];
 };
 
 export type Reactive<T extends object> = T;
 
-export type UnwrapRefSimple<T> = T extends BaseTypes | Function
-  ? T
-  : {
-      [P in keyof T]: T[P] extends Ref<infer V> ? UnwrapRef<V> : T[P];
-    };
-
-export type UnwrapRef<T> = T extends Ref<infer V>
-  ? UnwrapRefSimple<V>
-  : UnwrapRefSimple<T>;
-
-export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>;
-
 export interface Target {
-  [ReactiveFlags.SKIP]?: boolean;
-  [ReactiveFlags.IS_REACTIVE]?: boolean;
-  [ReactiveFlags.IS_READONLY]?: boolean;
-  [ReactiveFlags.IS_SHALLOW]?: boolean;
-  [ReactiveFlags.RAW]?: any;
+	[ReactiveFlags.SKIP]?: boolean;
+	[ReactiveFlags.IS_REACTIVE]?: boolean;
+	[ReactiveFlags.IS_READONLY]?: boolean;
+	[ReactiveFlags.IS_SHALLOW]?: boolean;
+	[ReactiveFlags.RAW]?: any;
 }
 
 enum TargetType {
-  INVALID = 0,
-  COMMON = 1,
-  COLLECTION = 2,
+	INVALID = 0,
+	COMMON = 1,
+	COLLECTION = 2
 }
 
 function targetTypeMap(rawType: string) {
-  switch (rawType) {
-    case "Object":
-    case "Array":
-      return TargetType.COMMON;
-    case "Map":
-    case "Set":
-    case "WeakMap":
-    case "WeakSet":
-      return TargetType.COLLECTION;
-    default:
-      return TargetType.INVALID;
-  }
+	switch (rawType) {
+		case "Object":
+		case "Array":
+			return TargetType.COMMON;
+		case "Map":
+		case "Set":
+		case "WeakMap":
+		case "WeakSet":
+			return TargetType.COLLECTION;
+		default:
+			return TargetType.INVALID;
+	}
 }
 
 /**
@@ -70,60 +60,103 @@ function targetTypeMap(rawType: string) {
  * @returns
  */
 function getTargetType(value: Target) {
-  return value[ReactiveFlags.SKIP] || !Object.isExtensible(value)
-    ? TargetType.INVALID
-    : targetTypeMap(toRawType(value));
+	return value[ReactiveFlags.SKIP] || !Object.isExtensible(value)
+		? TargetType.INVALID
+		: targetTypeMap(toRawType(value));
 }
 
-export function reactive<T extends object>(target: T): UnwrapNestedRefs<T> {
-  return createReactive(target, false, nomoralHandlers) as UnwrapNestedRefs<T>;
+// only unwrap nested ref
+export type UnwrapNestedRefs<T> = T extends Ref ? T : UnwrapRefSimple<T>;
+
+export function reactive<T extends object>(target: T) {
+	return createReactive(target, false, nomoralHandlers) as UnwrapNestedRefs<T>;
 }
 
 export function shallowReactive<T extends object>(target: T) {
-  return createReactive(target, false, shallowHandlers);
+	return createReactive(target, false, shallowHandlers);
 }
 
 export function readonly<T extends object>(target: T) {
-  return createReactive(target, true, readonlyHandlers) as DeepReadonly<T>;
+	return createReactive(target, true, readonlyHandlers) as DeepReadonly<T>;
 }
 
 export function shallowReadonly<T extends object>(target: T) {
-  return createReactive(target, true, shallowReadonlyHandlers) as Readonly<T>;
+	return createReactive(target, true, shallowReadonlyHandlers) as Readonly<T>;
 }
 
-const reactiveMap = new WeakMap();
+export const reactiveMap = new WeakMap();
 
-function createReactive(
-  target: Target,
-  isReadonly: boolean,
-  baseHandlers: ProxyHandler<any>
-) {
-  if (!isObject(target)) return target;
+function createReactive(target: Target, isReadonly: boolean, baseHandlers: ProxyHandler<any>) {
+	if (!isObject(target)) return target;
 
-  // 已经代理过的对象不需要代理了
-  // 只读+响应式对象，需要进一步代理
-  if (
-    target[ReactiveFlags.RAW] &&
-    !(isReadonly && target[ReactiveFlags.IS_REACTIVE])
-  ) {
-    return target;
-  }
+	// 已经代理过的对象不需要代理了
+	// 只读+响应式对象，需要进一步代理
+	if (target[ReactiveFlags.RAW] && !(isReadonly && target[ReactiveFlags.IS_REACTIVE])) {
+		return target;
+	}
 
-  const targetType = getTargetType(target);
-  // 判断对象类型
-  if (targetType === TargetType.INVALID) {
-    return target;
-  }
+	const targetType = getTargetType(target);
+	// 判断对象类型
+	if (targetType === TargetType.INVALID) {
+		return target;
+	}
 
-  // 在缓存中查找，已经代理过的对象不需要代理
-  const existionProxy = reactiveMap.get(target);
-  if (existionProxy) return existionProxy;
+	// 在缓存中查找，已经代理过的对象不需要代理
+	const existionProxy = reactiveMap.get(target);
+	if (existionProxy) return existionProxy;
 
-  const proxy = new Proxy(target, baseHandlers);
-  // 缓存代理过的对象
-  reactiveMap.set(target, proxy);
+	const proxy = new Proxy(target, baseHandlers);
+	// 缓存代理过的对象
+	reactiveMap.set(target, proxy);
 
-  return proxy;
+	return proxy;
+}
+
+/**
+ * 是否是只读对象
+ * @param value
+ */
+export function isReadonly(value: unknown) {
+	return !!(value && (value as Target)[ReactiveFlags.IS_READONLY]);
+}
+
+/**
+ * 是否是浅响应式对象
+ * @param value
+ * @returns
+ */
+export function isShallow(value: unknown): boolean {
+	return !!(value && (value as Target)[ReactiveFlags.IS_SHALLOW]);
+}
+
+/**
+ * 是否是代理对象
+ * @example
+ * ```js
+ * isReactive(reactive({}))            // => true
+ * isReactive(readonly(reactive({})))  // => true
+ * isReactive(ref({}).value)           // => true
+ * isReactive(readonly(ref({})).value) // => true
+ * isReactive(ref(true))               // => false
+ * isReactive(shallowRef({}).value)    // => false
+ * isReactive(shallowReactive({}))     // => true
+ * ```
+ * @param value
+ */
+export function isReactive(value: unknown) {
+	if (isReadonly(value)) {
+		return isReactive((value as Target)[ReactiveFlags.RAW]);
+	}
+	return !!(value && (value as Target)[ReactiveFlags.IS_REACTIVE]);
+}
+
+/**
+ * 是否是响应式对象
+ * @param value
+ * @returns
+ */
+export function isProxy(value: unknown) {
+	return isReactive(value) || isReadonly(value);
 }
 
 /**
@@ -131,18 +164,26 @@ function createReactive(
  * @param value
  */
 export const toReactive = <T extends unknown>(value: T): T =>
-  isObject(value) ? reactive(value as any) : value;
+	isObject(value) ? reactive(value as any) : value;
 
+/**
+ * 转换为原始对象
+ * @param observed
+ * @returns
+ */
 export function toRaw<T>(observed: any): T {
-  const raw = observed && observed[ReactiveFlags.RAW];
-  return raw ? toRaw(raw) : observed;
+	const raw = observed && observed[ReactiveFlags.RAW];
+	return raw ? toRaw(raw) : observed;
 }
 
 export declare const RawSymbol: unique symbol;
 export type Raw<T> = T & { [RawSymbol]?: true };
+/**
+ * 标记为不可响应
+ * @param value
+ * @returns
+ */
 export function markRaw<T extends object>(value: T): Raw<T> {
-  if (Object.isExtensible(value)) {
-    def(value, ReactiveFlags.SKIP, true);
-  }
-  return value;
+	def(value, ReactiveFlags.SKIP, true);
+	return value;
 }

@@ -53,7 +53,7 @@ function postCleanEffect(effect: ReactiveEffect) {
 	}
 }
 
-class ReactiveEffect {
+export class ReactiveEffect<T = any> {
 	// 是否是激活的
 	_active = true;
 
@@ -212,7 +212,7 @@ export function trigger(
 	}
 
 	for (const dep of deps) {
-		triggerEffects(dep);
+		dep && triggerEffects(dep);
 	}
 }
 
