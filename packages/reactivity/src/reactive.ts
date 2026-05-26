@@ -5,21 +5,14 @@ import {
 	shallowHandlers,
 	shallowReadonlyHandlers
 } from "./baseHandlers";
+import { ReactiveFlags } from "./constants";
 import type { Ref, UnwrapRefSimple } from "./ref";
-
-export const enum ReactiveFlags {
-	SKIP = "__v_skip",
-	IS_REACTIVE = "__v_isReactive",
-	IS_READONLY = "__v_isReadonly",
-	IS_SHALLOW = "__v_isShallow",
-	RAW = "__v_raw"
-}
 
 export declare const ShallowReactiveMarker: unique symbol;
 
 export type ShallowReactive<T> = T & { [ShallowReactiveMarker]?: true };
 
-type DeepReadonly<T> = {
+export type DeepReadonly<T> = {
 	readonly [P in keyof T]: T[P] extends object ? DeepReadonly<T[P]> : T[P];
 };
 

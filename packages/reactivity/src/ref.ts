@@ -57,12 +57,17 @@ class RefImpl<T> {
 	}
 }
 
+type RefBase<T> = {
+	dep?: Dep;
+	value: T;
+};
+
 /**
  * 收集ref的依赖
  * @param ref
  * @returns
  */
-function trackRefValue(ref: RefImpl<any>) {
+export function trackRefValue(ref: RefBase<any>) {
 	if (!activeEffect) return;
 	// 如果没有dep，则需要创建一个dep
 	if (!ref.dep) {
@@ -76,7 +81,7 @@ function trackRefValue(ref: RefImpl<any>) {
  * 触发ref的依赖
  * @param ref
  */
-function triggerRefValue(ref: RefImpl<any>) {
+export function triggerRefValue(ref: RefBase<any>) {
 	ref.dep && triggerEffects(ref.dep);
 }
 

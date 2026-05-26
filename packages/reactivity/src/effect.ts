@@ -1,10 +1,10 @@
-import { extend, isMap } from "@mini-vue/shared";
+import { extend, isMap, NOOP } from "@mini-vue/shared";
 import { ITERATE_KEY, MAP_KEYS_ITERATE_KEY } from "./baseHandlers";
-import { TriggerOpTypes } from "./operations";
+import { DirtyLevels, TriggerOpTypes } from "./constants";
 
 export type Dep = Map<ReactiveEffect, number> & { cleanup: () => void };
 
-interface ReactiveEffectOptions {
+export interface ReactiveEffectOptions {
 	scheduler?: () => any;
 	lazy?: boolean;
 }
@@ -34,12 +34,12 @@ export function enableTracking() {
 	shouldTrack = true;
 }
 
-function preCleanEffect(effect: ReactiveEffect) {
+function preCleanupEffect(effect: ReactiveEffect) {
 	effect._trackId++;
 	effect._depsLength = 0;
 }
 
-function postCleanEffect(effect: ReactiveEffect) {
+function postCleanupEffect(effect: ReactiveEffect) {
 	let maxLen = effect.deps.length;
 	const depsLen = effect._depsLength;
 
@@ -57,6 +57,8 @@ export class ReactiveEffect<T = any> {
 	// 是否是激活的
 	_active = true;
 
+	_dirtyLevel = DirtyLevels.Dirty;
+
 	_trackId = 0;
 
 	_depsLength = 0;
@@ -68,13 +70,24 @@ export class ReactiveEffect<T = any> {
 	lazy?: boolean;
 
 	constructor(
-		public fn: () => any,
-		public scheduler: ReactiveEffectOptions["scheduler"]
+		public fn: () => T,
+		public trigger: () => void,
+		public scheduler?: ReactiveEffectOptions["scheduler"]
 	) {
 		this.deps = [];
 	}
 
+	get dirty() {
+		return this._dirtyLevel >= DirtyLevels.Dirty;
+	}
+
+	public set dirty(v) {
+		this._dirtyLevel = v ? DirtyLevels.Dirty : DirtyLevels.NotDirty;
+	}
+
 	run() {
+		this._dirtyLevel = DirtyLevels.NotDirty;
+
 		if (!this._active) return this.fn();
 
 		let lastEffect = activeEffect;
@@ -84,15 +97,23 @@ export class ReactiveEffect<T = any> {
 
 			activeEffect = this;
 
-			preCleanEffect(this);
+			preCleanupEffect(this);
 
 			return this.fn();
 		} finally {
 			this._running--;
 
-			postCleanEffect(this);
+			postCleanupEffect(this);
 
 			activeEffect = lastEffect;
+		}
+	}
+
+	stop() {
+		if (this._active) {
+			preCleanupEffect(this);
+			postCleanupEffect(this);
+			this._active = false;
 		}
 	}
 }
@@ -234,11 +255,18 @@ export function triggerEffects(dep: Dep) {
 	pauseScheduling();
 
 	for (const effect of dep.keys()) {
-		// 如果副作用函数正在运行，则跳过
-		if (effect._running) continue;
-		// 调度器
-		if (effect.scheduler) {
-			queueEffectschedulerrs.push(effect.scheduler);
+		// 如果这个值不是脏值，触发更新时设置为脏值
+		if (effect._dirtyLevel < DirtyLevels.Dirty) {
+			effect._dirtyLevel = DirtyLevels.Dirty;
+
+			// 如果副作用函数正在运行，则跳过
+			if (effect._running) continue;
+
+			effect.trigger();
+			// 调度器
+			if (effect.scheduler) {
+				queueEffectschedulerrs.push(effect.scheduler);
+			}
 		}
 	}
 
@@ -246,8 +274,10 @@ export function triggerEffects(dep: Dep) {
 }
 
 export function effect(fn: () => any, options: ReactiveEffectOptions = {}) {
-	const _effect = new ReactiveEffect(fn, () => {
-		_effect.run();
+	const _effect = new ReactiveEffect(fn, NOOP, () => {
+		if (_effect.dirty) {
+			_effect.run();
+		}
 	});
 
 	if (options) {

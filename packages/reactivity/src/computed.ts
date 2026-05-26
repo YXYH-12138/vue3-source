@@ -1,6 +1,7 @@
 import { NOOP, isFunction } from "@mini-vue/shared";
-import { ReactiveEffect, type ReactiveEffectRunner, effect, track, trigger } from "./effect";
-import type { Ref } from "./ref";
+import { Dep, ReactiveEffect } from "./effect";
+import { trackRefValue, triggerRefValue, type Ref } from "./ref";
+import { ReactiveFlags } from "./constants";
 
 declare const ComputedRefSymbol: unique symbol;
 
@@ -22,29 +23,28 @@ export interface WritableComputedOptions<T> {
 }
 
 class ComputedRefImpl<T> {
-	// 标记是否需要重新计算值
-	private _dirty = false;
+	dep: Dep;
 
 	// 缓存值
 	private _value!: T;
 
-	readonly effect: ReactiveEffectRunner;
+	readonly effect: ReactiveEffect;
+
+	public readonly [ReactiveFlags.IS_READONLY]: boolean = false;
 
 	readonly __v_isRef = true;
 
 	constructor(
 		private getter: ComputedGetter<T>,
-		private readonly _setter: ComputedSetter<T>
+		private readonly _setter: ComputedSetter<T>,
+		isReadonly: boolean
 	) {
-		this.effect = effect(this.getter, {
-			lazy: true,
-			scheduler: () => {
-				// 依赖发生变化时，重置标志
-				this._dirty = false;
-				// 如果在effect中执行则需要手动触发依赖
-				trigger(this, "value");
-			}
+		this.effect = new ReactiveEffect(this.getter, () => {
+			// 如果在effect中执行则需要手动触发依赖
+			triggerRefValue(this);
 		});
+		(this.effect as any).__cmp = true;
+		this[ReactiveFlags.IS_READONLY] = isReadonly;
 	}
 
 	set value(newValue: T) {
@@ -52,11 +52,16 @@ class ComputedRefImpl<T> {
 	}
 
 	get value() {
-		if (this._dirty) return this._value;
-		this._dirty = true;
-		this._value = this.effect();
-		// 如果在effect中执行则需要手动收集依赖
-		track(this, "value");
+		// 对于嵌套的computed，需要进行依赖收集
+		trackRefValue(this);
+		if (this.effect.dirty) {
+			// const oldValue = this._value;
+			this._value = this.effect.run();
+
+			// if (hasChanged(oldValue, this._value)) {
+			// 	triggerRefValue(this);
+			// }
+		}
 		return this._value;
 	}
 }
@@ -76,7 +81,9 @@ export function computed<T>(
 	let getter: ComputedGetter<T>;
 	let setter: ComputedSetter<T>;
 
-	if (isFunction(getterOrOptions)) {
+	const onlyGetter = isFunction(getterOrOptions);
+
+	if (onlyGetter) {
 		getter = getterOrOptions;
 		setter = NOOP;
 	} else {
@@ -84,5 +91,5 @@ export function computed<T>(
 		setter = getterOrOptions.set;
 	}
 
-	return new ComputedRefImpl<T>(getter, setter) as any;
+	return new ComputedRefImpl<T>(getter, setter, onlyGetter || !setter) as any;
 }

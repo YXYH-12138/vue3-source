@@ -9,9 +9,8 @@ import {
 	isSymbol
 } from "@mini-vue/shared";
 import { enableTracking, pauseTracking, track, trigger } from "./effect";
-import { TriggerOpTypes } from "./operations";
+import { ReactiveFlags, TriggerOpTypes } from "./constants";
 import {
-	ReactiveFlags,
 	isReadonly,
 	isShallow,
 	reactive,

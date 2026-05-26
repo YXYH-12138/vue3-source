@@ -1,34 +1,23 @@
-import { computed } from "../src/computed";
-import { reactive } from "../src/reactive";
-import { vi } from "vitest";
+import { computed, effect, isReadonly, reactive, ref, WritableComputedRef } from "../src";
 
-describe("computed", () => {
-	it("happy path", () => {
-		const value = reactive({
-			foo: 1
-		});
-
-		const getter = computed(() => {
-			return value.foo;
-		});
-
-		value.foo = 2;
-		expect(getter.value).toBe(2);
+describe("reactivity/computed", () => {
+	it("should return updated value", () => {
+		const value = reactive<{ foo?: number }>({});
+		const cValue = computed(() => value.foo);
+		expect(cValue.value).toBe(undefined);
+		value.foo = 1;
+		expect(cValue.value).toBe(1);
 	});
 
 	it("should compute lazily", () => {
-		const value = reactive({
-			foo: 1
-		});
-		const getter = vi.fn(() => {
-			return value.foo;
-		});
+		const value = reactive<{ foo?: number }>({});
+		const getter = vi.fn(() => value.foo);
 		const cValue = computed(getter);
 
 		// lazy
 		expect(getter).not.toHaveBeenCalled();
 
-		expect(cValue.value).toBe(1);
+		expect(cValue.value).toBe(undefined);
 		expect(getter).toHaveBeenCalledTimes(1);
 
 		// should not compute again
@@ -36,15 +25,348 @@ describe("computed", () => {
 		expect(getter).toHaveBeenCalledTimes(1);
 
 		// should not compute until needed
-		value.foo = 2;
+		value.foo = 1;
 		expect(getter).toHaveBeenCalledTimes(1);
 
 		// now it should compute
-		expect(cValue.value).toBe(2);
+		expect(cValue.value).toBe(1);
 		expect(getter).toHaveBeenCalledTimes(2);
 
 		// should not compute again
 		cValue.value;
 		expect(getter).toHaveBeenCalledTimes(2);
+	});
+
+	it("should trigger effect", () => {
+		const value = reactive<{ foo?: number }>({});
+		const cValue = computed(() => value.foo);
+		let dummy;
+		effect(() => {
+			dummy = cValue.value;
+		});
+		expect(dummy).toBe(undefined);
+		value.foo = 1;
+		expect(dummy).toBe(1);
+	});
+
+	it("should work when chained", () => {
+		const value = reactive({ foo: 0 });
+		const c1 = computed(() => value.foo);
+		const c2 = computed(() => c1.value + 1);
+		expect(c1.value).toBe(0);
+		expect(c2.value).toBe(1);
+		value.foo++;
+		expect(c2.value).toBe(2);
+		expect(c1.value).toBe(1);
+	});
+
+	it("should trigger effect when chained", () => {
+		const value = reactive({ foo: 0 });
+		const getter1 = vi.fn(() => value.foo);
+		const getter2 = vi.fn(() => {
+			return c1.value + 1;
+		});
+		const c1 = computed(getter1);
+		const c2 = computed(getter2);
+
+		let dummy;
+		effect(() => {
+			dummy = c2.value;
+		});
+		expect(dummy).toBe(1);
+		expect(getter1).toHaveBeenCalledTimes(1);
+		expect(getter2).toHaveBeenCalledTimes(1);
+		value.foo++;
+		expect(dummy).toBe(2);
+		// should not result in duplicate calls
+		expect(getter1).toHaveBeenCalledTimes(2);
+		expect(getter2).toHaveBeenCalledTimes(2);
+	});
+
+	it("should trigger effect when chained (mixed invocations)", () => {
+		const value = reactive({ foo: 0 });
+		const getter1 = vi.fn(() => value.foo);
+		const getter2 = vi.fn(() => {
+			return c1.value + 1;
+		});
+		const c1 = computed(getter1);
+		const c2 = computed(getter2);
+
+		let dummy;
+		effect(() => {
+			dummy = c1.value + c2.value;
+		});
+		expect(dummy).toBe(1);
+
+		expect(getter1).toHaveBeenCalledTimes(1);
+		expect(getter2).toHaveBeenCalledTimes(1);
+		value.foo++;
+		expect(dummy).toBe(3);
+		// should not result in duplicate calls
+		expect(getter1).toHaveBeenCalledTimes(2);
+		expect(getter2).toHaveBeenCalledTimes(2);
+	});
+
+	it("should no longer update when stopped", () => {
+		const value = reactive<{ foo?: number }>({});
+		const cValue = computed(() => value.foo);
+		let dummy;
+		effect(() => {
+			dummy = cValue.value;
+		});
+		expect(dummy).toBe(undefined);
+		value.foo = 1;
+		expect(dummy).toBe(1);
+		cValue.effect.stop();
+		value.foo = 2;
+		expect(dummy).toBe(1);
+	});
+
+	it("should support setter", () => {
+		const n = ref(1);
+		const plusOne = computed({
+			get: () => n.value + 1,
+			set: (val) => {
+				n.value = val - 1;
+			}
+		});
+
+		expect(plusOne.value).toBe(2);
+		n.value++;
+		expect(plusOne.value).toBe(3);
+
+		plusOne.value = 0;
+		expect(n.value).toBe(-1);
+	});
+
+	it("should trigger effect w/ setter", () => {
+		const n = ref(1);
+		const plusOne = computed({
+			get: () => n.value + 1,
+			set: (val) => {
+				n.value = val - 1;
+			}
+		});
+
+		let dummy;
+		effect(() => {
+			dummy = n.value;
+		});
+		expect(dummy).toBe(1);
+
+		plusOne.value = 0;
+		expect(dummy).toBe(-1);
+	});
+
+	// #5720
+	it("should invalidate before non-computed effects", () => {
+		let plusOneValues: number[] = [];
+		const n = ref(0);
+		const plusOne = computed(() => {
+			return n.value + 1;
+		});
+
+		// const fn = vi.fn(() => {});
+
+		effect(() => {
+			n.value;
+			plusOneValues.push(plusOne.value);
+			// fn();
+		});
+		// access plusOne, causing it to be non-dirty
+		// plusOne.value;
+		// mutate n
+		n.value++;
+
+		// expect(fn).toHaveBeenCalledTimes(2);
+		// on the 2nd run, plusOne.value should have already updated.
+		expect(plusOneValues).toMatchObject([1, 2]);
+	});
+
+	it("should be readonly", () => {
+		let a = { a: 1 };
+		const x = computed(() => a);
+		expect(isReadonly(x)).toBe(true);
+		expect(isReadonly(x.value)).toBe(false);
+		expect(isReadonly(x.value.a)).toBe(false);
+		const z = computed<typeof a>({
+			get() {
+				return a;
+			},
+			set(v) {
+				a = v;
+			}
+		});
+		expect(isReadonly(z)).toBe(false);
+		expect(isReadonly(z.value.a)).toBe(false);
+	});
+
+	it("should expose value when stopped", () => {
+		const x = computed(() => 1);
+		x.effect.stop();
+		expect(x.value).toBe(1);
+	});
+
+	// https://github.com/vuejs/core/pull/5912#issuecomment-1497596875
+	it("should query deps dirty sequentially", () => {
+		const cSpy = vi.fn();
+
+		const a = ref<null | { v: number }>({
+			v: 1
+		});
+		const b = computed(() => {
+			return a.value;
+		});
+		const c = computed(() => {
+			cSpy();
+			return b.value?.v;
+		});
+		const d = computed(() => {
+			if (b.value) {
+				return c.value;
+			}
+			return 0;
+		});
+
+		d.value;
+		a.value!.v = 2;
+		a.value = null;
+		d.value;
+		expect(cSpy).toHaveBeenCalledTimes(1);
+	});
+
+	// https://github.com/vuejs/core/pull/5912#issuecomment-1738257692
+	it("chained computed dirty reallocation after querying dirty", () => {
+		let _msg: string | undefined;
+
+		const items = ref<number[]>([]);
+		const isLoaded = computed(() => {
+			return !!items.value;
+		});
+		const msg = computed(() => {
+			if (isLoaded.value) {
+				return "The items are loaded";
+			} else {
+				return "The items are not loaded";
+			}
+		});
+
+		effect(() => {
+			_msg = msg.value;
+		});
+
+		items.value = [1, 2, 3];
+		items.value = [1, 2, 3];
+		items.value = undefined;
+
+		expect(_msg).toBe("The items are not loaded");
+	});
+
+	it("chained computed dirty reallocation after trigger computed getter", () => {
+		let _msg: string | undefined;
+
+		const items = ref<number[]>([]);
+		const isLoaded = computed(() => {
+			return !!items.value;
+		});
+		const msg = computed(() => {
+			if (isLoaded.value) {
+				return "The items are loaded";
+			} else {
+				return "The items are not loaded";
+			}
+		});
+
+		_msg = msg.value;
+		items.value = [1, 2, 3];
+		isLoaded.value; // <- trigger computed getter
+		_msg = msg.value;
+		items.value = undefined;
+		_msg = msg.value;
+
+		expect(_msg).toBe("The items are not loaded");
+	});
+
+	// https://github.com/vuejs/core/pull/5912#issuecomment-1739159832
+	it("deps order should be consistent with the last time get value", () => {
+		const cSpy = vi.fn();
+
+		const a = ref(0);
+		const b = computed(() => {
+			return a.value % 3 !== 0;
+		});
+		const c = computed(() => {
+			cSpy();
+			if (a.value % 3 === 2) {
+				return "expensive";
+			}
+			return "cheap";
+		});
+		const d = computed(() => {
+			return a.value % 3 === 2;
+		});
+		const e = computed(() => {
+			if (b.value) {
+				if (d.value) {
+					return "Avoiding expensive calculation";
+				}
+			}
+			return c.value;
+		});
+
+		e.value;
+		a.value++;
+		e.value;
+
+		expect(e.effect.deps.length).toBe(3);
+		expect(e.effect.deps.indexOf((b as any).dep)).toBe(0);
+		expect(e.effect.deps.indexOf((d as any).dep)).toBe(1);
+		expect(e.effect.deps.indexOf((c as any).dep)).toBe(2);
+		expect(cSpy).toHaveBeenCalledTimes(2);
+
+		a.value++;
+		e.value;
+
+		expect(cSpy).toHaveBeenCalledTimes(2);
+	});
+
+	it("should trigger by the second computed that maybe dirty", () => {
+		const cSpy = vi.fn();
+
+		const src1 = ref(0);
+		const src2 = ref(0);
+		const c1 = computed(() => src1.value);
+		const c2 = computed(() => (src1.value % 2) + src2.value);
+		const c3 = computed(() => {
+			cSpy();
+			c1.value;
+			c2.value;
+		});
+
+		c3.value;
+		src1.value = 2;
+		c3.value;
+		expect(cSpy).toHaveBeenCalledTimes(2);
+		src2.value = 1;
+		c3.value;
+		expect(cSpy).toHaveBeenCalledTimes(3);
+	});
+
+	it("should trigger the second effect", () => {
+		const fnSpy = vi.fn();
+		const v = ref(1);
+		const c = computed(() => v.value);
+
+		effect(() => {
+			c.value;
+		});
+		effect(() => {
+			c.value;
+			fnSpy();
+		});
+
+		expect(fnSpy).toBeCalledTimes(1);
+		v.value = 2;
+		expect(fnSpy).toBeCalledTimes(2);
 	});
 });
