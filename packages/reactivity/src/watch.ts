@@ -1,5 +1,7 @@
-import { isFunction, isObject } from "@mini-vue/shared";
-import { effect } from "./effect";
+import { isFunction, isObject, NOOP } from "@mini-vue/shared";
+import { ReactiveEffect } from "./effect";
+import { isReactive } from "./reactive";
+import { isRef } from "./ref";
 
 type OnCleanup = (cleanupFn: () => void) => void;
 type WatchSource<T = any> = T | (() => T);
@@ -8,7 +10,7 @@ type WatchCallback<V = any, OV = any> = (value: V, oldValue: OV, onCleanup: OnCl
 interface WatchOptions<Immediate = boolean> {
 	immediate?: Immediate;
 	flush?: "pre" | "post" | "sync";
-	// deep?: boolean;
+	deep?: boolean;
 }
 
 export function watch<T, Immediate>(
@@ -16,15 +18,30 @@ export function watch<T, Immediate>(
 	cb: WatchCallback<T, T>,
 	options?: WatchOptions<Immediate>
 ) {
-	const flush = options?.flush || "post";
+	dowatch(source, cb, options);
+}
+
+function dowatch<T, Immediate>(
+	source: WatchSource<T>,
+	cb: WatchCallback<T, T>,
+	options?: WatchOptions<Immediate>
+) {
+	const flush = options?.flush ?? "post";
+
+	const deep = options?.deep ?? false;
+
 	let oldValue: any, newValue: any;
 
 	let getter: () => T;
 
 	if (isFunction(source)) {
 		getter = source;
+	} else if (isReactive(source)) {
+		getter = () => traverse(source, deep);
+	} else if (isRef(source)) {
+		getter = () => source.value;
 	} else {
-		getter = () => traverse(source);
+		getter = () => source;
 	}
 
 	let cleanup: () => void;
@@ -34,26 +51,23 @@ export function watch<T, Immediate>(
 
 	const job = () => {
 		cleanup && cleanup();
-		newValue = effectFn();
+		newValue = effect.run();
 		cb(newValue, oldValue, onCleanup);
 		oldValue = newValue;
 	};
 
-	const effectFn = effect(getter, {
-		lazy: true,
-		scheduler: () => {
-			if (flush === "post") {
-				Promise.resolve().then(job);
-			} else {
-				job();
-			}
+	const effect = new ReactiveEffect(getter, NOOP, () => {
+		if (flush === "post") {
+			Promise.resolve().then(job);
+		} else {
+			job();
 		}
 	});
 
 	if (options?.immediate) {
 		job();
 	} else {
-		oldValue = effectFn();
+		oldValue = effect.run();
 	}
 }
 
@@ -63,14 +77,14 @@ export function watch<T, Immediate>(
  * @param seen
  * @returns
  */
-function traverse<T>(value: T, seen = new Set()): T {
+function traverse<T>(value: T, deep: boolean, seen = new Set()): T {
 	// 是原始值或被读取过则直接返回
 	if (!isObject(value) || seen.has(value)) return value;
 	// 将数据添加到seen中，避免循环引用导致的问题
 	seen.add(value);
 	// 暂未考虑数组等其他结构
 	for (const key in value) {
-		traverse(value[key], seen);
+		deep ? traverse(value[key], deep, seen) : value[key];
 	}
 	return value;
 }
