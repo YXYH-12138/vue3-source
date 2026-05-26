@@ -57,7 +57,6 @@ class ComputedRefImpl<T> {
 		if (this.effect.dirty) {
 			// const oldValue = this._value;
 			this._value = this.effect.run();
-
 			// if (hasChanged(oldValue, this._value)) {
 			// 	triggerRefValue(this);
 			// }

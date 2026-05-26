@@ -159,6 +159,15 @@ describe("reactivity/computed", () => {
 	});
 
 	// #5720
+	/**
+	 * effect -> deps[Dep(ref),Dep(computedRef)]
+	 * 	ref(n) -> dep[effect,id]
+	 * 	computedRef -> dep[effect,id]
+	 * 		ref(n) -> dep[computedEffect,id]
+	 * n变化先执行dep[effect,id]，再执行dep[computedEffect,id]
+	 * 执行computedEffect时，触发的是trigger，不是scheduler，
+	 * 由于上一次执行时，导致dirdy变为true，所以不会执行computedRef的effect
+	 */
 	it("should invalidate before non-computed effects", () => {
 		let plusOneValues: number[] = [];
 		const n = ref(0);

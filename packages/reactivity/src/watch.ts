@@ -41,7 +41,7 @@ export function watch<T, Immediate>(
 
 	const effectFn = effect(getter, {
 		lazy: true,
-		schedule: () => {
+		scheduler: () => {
 			if (flush === "post") {
 				Promise.resolve().then(job);
 			} else {
