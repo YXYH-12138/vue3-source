@@ -1,6 +1,6 @@
 import { reactive } from "../src/reactive";
 import { ref } from "../src/ref";
-import { watch } from "../src/watch";
+import { watch, watchEffect } from "../src/watch";
 
 /**
  * Simple microtask-based nextTick helper since the project may not have scheduler.ts.
@@ -475,5 +475,269 @@ describe("watch", () => {
 		list.push(4);
 		await nextTick();
 		expect(spy).toHaveBeenCalledTimes(1);
+	});
+
+	it("should unwatch", () => {
+		const state = reactive({ count: 0 });
+		const spy = vi.fn();
+
+		const unwatch = watch(() => state.count, spy);
+
+		expect(spy).not.toBeCalled();
+		unwatch();
+		state.count = 2;
+		expect(spy).toHaveBeenCalledTimes(0);
+	});
+
+	describe("watchEffect", () => {
+		it("should run immediately on creation", () => {
+			const state = reactive({ a: 0 });
+			let dummy: any;
+
+			watchEffect(() => {
+				dummy = state.a;
+			});
+
+			expect(dummy).toBe(0);
+		});
+
+		it("should re-run when dependency changes", () => {
+			const state = reactive({ a: 0, b: 10 });
+			const spyA = vi.fn(() => state.a);
+			const spyB = vi.fn(() => state.b);
+
+			watchEffect(spyA);
+			watchEffect(spyB);
+
+			expect(spyA).toHaveBeenCalledTimes(1);
+			expect(spyB).toHaveBeenCalledTimes(1);
+
+			state.a = 1;
+			expect(spyA).toHaveBeenCalledTimes(2);
+			expect(spyB).toHaveBeenCalledTimes(1);
+
+			state.b = 1;
+			expect(spyA).toHaveBeenCalledTimes(2);
+			expect(spyB).toHaveBeenCalledTimes(2);
+		});
+
+		it("should track dependencies dynamically", () => {
+			const state = reactive({ flag: true, a: 0, b: 10 });
+			let dummy: any;
+
+			watchEffect(() => {
+				if (state.flag) {
+					dummy = state.a;
+				} else {
+					dummy = state.b;
+				}
+			});
+
+			expect(dummy).toBe(0);
+
+			// Change a -> triggers re-run
+			state.a = 1;
+			expect(dummy).toBe(1);
+
+			// Change flag -> re-run, now tracking b instead of a
+			state.flag = false;
+			expect(dummy).toBe(10);
+
+			// Change a -> should NOT re-run (a is no longer a dependency)
+			state.a = 100;
+			expect(dummy).toBe(10);
+
+			// Change b -> should re-run (b is now a dependency)
+			state.b = 20;
+			expect(dummy).toBe(20);
+		});
+
+		it("should support onCleanup callback", () => {
+			const state = reactive({ count: 0 });
+			const cleanupSpy = vi.fn();
+			// oxlint-disable-next-line no-unused-vars
+			let cleanupCalledTimes = 0;
+
+			watchEffect((onCleanup) => {
+				state.count; // track dependency
+				onCleanup(() => {
+					cleanupSpy();
+					cleanupCalledTimes++;
+				});
+			});
+
+			// First run: no cleanup yet
+			expect(cleanupSpy).not.toHaveBeenCalled();
+
+			// Trigger re-run: cleanup from first run should fire
+			state.count = 1;
+			expect(cleanupSpy).toHaveBeenCalledTimes(1);
+
+			// Trigger again
+			state.count = 2;
+			expect(cleanupSpy).toHaveBeenCalledTimes(2);
+		});
+
+		it("should support sync flush", () => {
+			const state = reactive({ count: 0 });
+			let dummy: any;
+
+			watchEffect(
+				() => {
+					dummy = state.count;
+				},
+				{ flush: "sync" }
+			);
+
+			expect(dummy).toBe(0);
+
+			state.count = 5;
+			// sync flush: already updated
+			expect(dummy).toBe(5);
+		});
+
+		it("should support post flush", async () => {
+			const state = reactive({ count: 0 });
+			let dummy: any;
+
+			watchEffect(
+				() => {
+					dummy = state.count;
+				},
+				{ flush: "post" }
+			);
+
+			expect(dummy).toBe(0);
+
+			state.count = 5;
+			// post flush: should NOT be updated synchronously
+			expect(dummy).toBe(0);
+
+			await nextTick();
+			expect(dummy).toBe(5);
+		});
+
+		it("should batch updates with post flush on consecutive changes", async () => {
+			const state = reactive({ count: 0 });
+			const spy = vi.fn(() => {
+				state.count;
+			});
+
+			watchEffect(spy, { flush: "post" });
+
+			expect(spy).toHaveBeenCalledTimes(1);
+
+			state.count = 1;
+			state.count = 2;
+			state.count = 3;
+
+			// Not updated synchronously
+			expect(spy).toHaveBeenCalledTimes(1);
+
+			await nextTick();
+			// All three triggers should queue separate jobs
+			expect(spy).toHaveBeenCalled();
+		});
+
+		it("should not re-run when unrelated dependencies change", () => {
+			const state = reactive({ a: 0, b: "hello" });
+			const spy = vi.fn(() => {
+				state.a;
+			});
+
+			watchEffect(spy);
+
+			expect(spy).toHaveBeenCalledTimes(1);
+
+			// Change unrelated property
+			state.b = "world";
+			expect(spy).toHaveBeenCalledTimes(1);
+
+			// Change related property
+			state.a = 1;
+			expect(spy).toHaveBeenCalledTimes(2);
+		});
+
+		it("should unwatch", () => {
+			const state = reactive({ count: 0 });
+			const spy = vi.fn(() => state.count);
+
+			const unwatch = watchEffect(spy);
+
+			expect(unwatch).toBeDefined();
+			unwatch();
+			state.count = 2;
+			expect(spy).toHaveBeenCalledTimes(1);
+		});
+
+		it("should work with ref dependencies", () => {
+			const count = ref(0);
+			let dummy: any;
+
+			watchEffect(() => {
+				dummy = count.value;
+			});
+
+			expect(dummy).toBe(0);
+
+			count.value = 10;
+			expect(dummy).toBe(10);
+		});
+
+		it("should work with multiple refs", () => {
+			const a = ref(1);
+			const b = ref(2);
+			let sum: any;
+
+			watchEffect(() => {
+				sum = a.value + b.value;
+			});
+
+			expect(sum).toBe(3);
+
+			a.value = 10;
+			expect(sum).toBe(12);
+
+			b.value = 20;
+			expect(sum).toBe(30);
+		});
+
+		it("should track deep reactive object dependencies", () => {
+			const state = reactive({
+				user: {
+					profile: {
+						age: 10
+					}
+				}
+			});
+			let dummy: any;
+
+			watchEffect(() => {
+				dummy = state.user.profile.age;
+			});
+
+			expect(dummy).toBe(10);
+
+			state.user.profile.age = 20;
+			expect(dummy).toBe(20);
+		});
+
+		it("should cleanup on each re-run and cancel stale side effects", () => {
+			const state = reactive({ id: 1 });
+			const cancels: string[] = [];
+
+			watchEffect((onCleanup) => {
+				const currentId = state.id;
+				onCleanup(() => {
+					cancels.push(`cancel-${currentId}`);
+				});
+			});
+
+			state.id = 2;
+			expect(cancels).toEqual(["cancel-1"]);
+
+			state.id = 3;
+			expect(cancels).toEqual(["cancel-1", "cancel-2"]);
+		});
 	});
 });

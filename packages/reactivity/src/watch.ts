@@ -7,39 +7,52 @@ type OnCleanup = (cleanupFn: () => void) => void;
 type WatchSource<T = any> = T | (() => T);
 type WatchCallback<V = any, OV = any> = (value: V, oldValue: OV, onCleanup: OnCleanup) => any;
 
-interface WatchOptions<Immediate = boolean> {
-	immediate?: Immediate;
+export type WatchEffect = (onCleanup: OnCleanup) => void;
+
+export interface WatchOptionsBase {
 	flush?: "pre" | "post" | "sync";
+}
+
+interface WatchOptions<Immediate = boolean> extends WatchOptionsBase {
+	immediate?: Immediate;
 	deep?: boolean;
 }
 
-export function watch<T, Immediate>(
+export function watch<T = any, Immediate extends boolean = false>(
 	source: WatchSource<T>,
 	cb: WatchCallback<T, T>,
 	options?: WatchOptions<Immediate>
 ) {
-	dowatch(source, cb, options);
+	return doWatch(source, cb, options);
 }
 
-function dowatch<T, Immediate>(
-	source: WatchSource<T>,
-	cb: WatchCallback<T, T>,
-	options?: WatchOptions<Immediate>
+export function watchEffect(effect: WatchEffect, options?: WatchOptionsBase) {
+	return doWatch(effect, null, options);
+}
+
+function doWatch(
+	source: WatchSource | WatchEffect,
+	cb: WatchCallback | null,
+	{ immediate, deep, flush }: WatchOptions = {}
 ) {
-	const flush = options?.flush ?? "post";
-
-	const deep = options?.deep ?? false;
-
 	let oldValue: any, newValue: any;
 
-	let getter: () => T;
+	let getter: () => any | WatchEffect;
 
 	if (isFunction(source)) {
-		getter = source;
-	} else if (isReactive(source)) {
-		getter = () => traverse(source, deep);
+		if (cb) {
+			getter = source;
+		} else {
+			// watchEffect
+			getter = () => {
+				cleanup && cleanup();
+				source(onCleanup);
+			};
+		}
 	} else if (isRef(source)) {
 		getter = () => source.value;
+	} else if (isReactive(source)) {
+		getter = () => traverse(source, deep);
 	} else {
 		getter = () => source;
 	}
@@ -50,10 +63,15 @@ function dowatch<T, Immediate>(
 	};
 
 	const job = () => {
-		cleanup && cleanup();
-		newValue = effect.run();
-		cb(newValue, oldValue, onCleanup);
-		oldValue = newValue;
+		if (cb) {
+			cleanup && cleanup();
+			newValue = effect.run();
+			cb(newValue, oldValue, onCleanup);
+			oldValue = newValue;
+		} else {
+			// watchEffect
+			effect.run();
+		}
 	};
 
 	const effect = new ReactiveEffect(getter, NOOP, () => {
@@ -64,11 +82,20 @@ function dowatch<T, Immediate>(
 		}
 	});
 
-	if (options?.immediate) {
-		job();
+	if (cb) {
+		if (immediate) {
+			job();
+		} else {
+			oldValue = effect.run();
+		}
 	} else {
-		oldValue = effect.run();
+		// watchEffect
+		effect.run();
 	}
+
+	const unwatch = () => effect.stop();
+
+	return unwatch;
 }
 
 /**

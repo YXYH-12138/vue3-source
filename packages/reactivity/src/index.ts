@@ -23,7 +23,7 @@ export {
 	type ComputedGetter,
 	type ComputedSetter
 } from "./computed";
-export { watch } from "./watch";
+export { watch, watchEffect } from "./watch";
 export {
 	ref,
 	toRef,
