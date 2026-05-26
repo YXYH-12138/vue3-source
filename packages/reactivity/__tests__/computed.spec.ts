@@ -1,4 +1,4 @@
-import { computed, effect, isReadonly, reactive, ref, WritableComputedRef } from "../src";
+import { computed, effect, isReadonly, reactive, ref } from "../src";
 
 describe("reactivity/computed", () => {
 	it("should return updated value", () => {
@@ -166,19 +166,16 @@ describe("reactivity/computed", () => {
 			return n.value + 1;
 		});
 
-		// const fn = vi.fn(() => {});
-
 		effect(() => {
 			n.value;
 			plusOneValues.push(plusOne.value);
 			// fn();
 		});
 		// access plusOne, causing it to be non-dirty
-		// plusOne.value;
+		plusOne.value;
 		// mutate n
 		n.value++;
 
-		// expect(fn).toHaveBeenCalledTimes(2);
 		// on the 2nd run, plusOne.value should have already updated.
 		expect(plusOneValues).toMatchObject([1, 2]);
 	});

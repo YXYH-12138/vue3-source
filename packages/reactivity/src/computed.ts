@@ -40,7 +40,7 @@ class ComputedRefImpl<T> {
 		isReadonly: boolean
 	) {
 		this.effect = new ReactiveEffect(this.getter, () => {
-			// 如果在effect中执行则需要手动触发依赖
+			// 使用trigger
 			triggerRefValue(this);
 		});
 		(this.effect as any).__cmp = true;
