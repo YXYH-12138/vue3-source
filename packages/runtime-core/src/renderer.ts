@@ -330,7 +330,7 @@ function baseCreateRenderer<HostElement = RendererElement>({
 				}
 				instance.subTree = subTree;
 			},
-			{ schedule }
+			{ scheduler: schedule as any }
 		);
 	}
 
@@ -528,8 +528,8 @@ function baseCreateRenderer<HostElement = RendererElement>({
 		// a (b c)
 		// d e (b c)
 		while (startIndex <= oldEndIndex && startIndex <= newEndIndex) {
-			const n1 = oldChildren[startIndex];
-			const n2 = newChildren[startIndex];
+			const n1 = oldChildren[oldEndIndex];
+			const n2 = newChildren[newEndIndex];
 			if (isSameVNodeType(n1, n2)) {
 				patch(n1, n2, container);
 			} else {
