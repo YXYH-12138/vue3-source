@@ -69,13 +69,14 @@ type RefBase<T> = {
  */
 export function trackRefValue(ref: RefBase<any>) {
 	if (!activeEffect) return;
+	let dep = ref.dep;
 	// 如果没有dep，则需要创建一个dep
-	if (!ref.dep) {
-		ref.dep = createDepMap(() => {
+	if (!dep) {
+		dep = ref.dep = createDepMap(() => {
 			ref.dep = undefined;
 		});
 	}
-	trackEffect(activeEffect, ref.dep);
+	trackEffect(activeEffect, dep);
 }
 /**
  * 触发ref的依赖

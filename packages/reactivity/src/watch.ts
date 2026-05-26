@@ -59,7 +59,10 @@ function doWatch(
 
 	let cleanup: () => void;
 	const onCleanup: OnCleanup = (cb) => {
-		cleanup = cb;
+		cleanup = () => {
+			cb();
+			cleanup = undefined;
+		};
 	};
 
 	const job = () => {
