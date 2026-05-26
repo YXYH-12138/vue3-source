@@ -21,7 +21,7 @@
 		"types": ["node", "vitest/globals"],
 		"rootDir": ".",
 		"paths": {
-			"@vue/*": ["packages/*/src"]
+			"@mini-vue/*": ["packages/*/src"]
 		}
 	},
 	"include": ["packages/**/*.ts"]
