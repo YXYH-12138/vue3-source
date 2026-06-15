@@ -262,6 +262,7 @@ export function triggerEffects(dep: Dep) {
 			// 如果副作用函数正在运行，则跳过
 			if (effect._running) continue;
 
+			// 可以保证先执行computed的副作用
 			effect.trigger();
 			// 调度器
 			if (effect.scheduler) {

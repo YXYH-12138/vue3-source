@@ -52,7 +52,13 @@ class ComputedRefImpl<T> {
 	}
 
 	get value() {
-		// 对于嵌套的computed，需要进行依赖收集
+		/**
+		 * 对于嵌套的computed，需要进行依赖收集
+		 * const value = reactive({ foo: 0 });
+		 * const c1 = computed(() => value.foo);
+		 * const c2 = computed(() => c1.value + 1);
+		 * trackRefValue如果在判断里面，会收集不到依赖
+		 */
 		trackRefValue(this);
 		if (this.effect.dirty) {
 			// const oldValue = this._value;
